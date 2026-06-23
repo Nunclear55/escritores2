@@ -1,0 +1,178 @@
+package com.nunclear.escritores.service;
+
+import com.nunclear.escritores.dto.request.CreateFollowRequest;
+import com.nunclear.escritores.dto.response.*;
+import com.nunclear.escritores.entity.AppUser;
+import com.nunclear.escritores.entity.UserFollow;
+import com.nunclear.escritores.exception.BadRequestException;
+import com.nunclear.escritores.exception.ResourceNotFoundException;
+import com.nunclear.escritores.exception.UnauthorizedException;
+import com.nunclear.escritores.repository.AppUserRepository;
+import com.nunclear.escritores.repository.UserFollowRepository;
+import com.nunclear.escritores.security.CustomUserDetails;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class FollowService {
+
+    private static final String USER_NOT_FOUND = "Usuario no encontrado";
+
+    private final UserFollowRepository userFollowRepository;
+    private final AppUserRepository appUserRepository;
+
+    public FollowResponse createFollow(CreateFollowRequest request) {
+        AppUser currentUser = getAuthenticatedUser();
+
+        AppUser followedUser = appUserRepository.findById(request.followedUserId())
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
+
+        if (followedUser.getDeletedAt() != null) {
+            throw new ResourceNotFoundException(USER_NOT_FOUND);
+        }
+
+        if (currentUser.getId().equals(followedUser.getId())) {
+            throw new BadRequestException("No puedes seguirte a ti mismo");
+        }
+
+        if (userFollowRepository.existsByFollowerUserIdAndFollowedUserId(currentUser.getId(), followedUser.getId())) {
+            throw new BadRequestException("Ya sigues a este autor");
+        }
+
+        UserFollow follow = new UserFollow();
+        follow.setFollowerUserId(currentUser.getId());
+        follow.setFollowedUserId(followedUser.getId());
+
+        UserFollow saved = userFollowRepository.save(follow);
+
+        return new FollowResponse(
+                saved.getId(),
+                saved.getFollowerUserId(),
+                saved.getFollowedUserId()
+        );
+    }
+
+    public MessageResponse unfollow(Integer followedUserId) {
+        AppUser currentUser = getAuthenticatedUser();
+
+        AppUser followedUser = appUserRepository.findById(followedUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
+
+        if (!userFollowRepository.existsByFollowerUserIdAndFollowedUserId(currentUser.getId(), followedUser.getId())) {
+            throw new ResourceNotFoundException("No sigues a este autor");
+        }
+
+        userFollowRepository.deleteByFollowerUserIdAndFollowedUserId(currentUser.getId(), followedUser.getId());
+
+        return new MessageResponse("Dejaste de seguir al autor");
+    }
+
+    public PageResponse<FollowUserItemResponse> getMyFollowing(int page, int size, String sort) {
+        AppUser currentUser = getAuthenticatedUser();
+
+        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Page<UserFollow> result = userFollowRepository.findByFollowerUserId(currentUser.getId(), pageable);
+
+        return new PageResponse<>(
+                result.getContent().stream()
+                        .map(follow -> {
+                            AppUser user = appUserRepository.findById(follow.getFollowedUserId()).orElse(null);
+                            return new FollowUserItemResponse(
+                                    follow.getFollowedUserId(),
+                                    user != null ? user.getDisplayName() : null
+                            );
+                        })
+                        .toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
+    }
+
+    public PageResponse<FollowUserItemResponse> getFollowers(Integer userId, int page, int size, String sort) {
+        AppUser targetUser = appUserRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
+
+        if (targetUser.getDeletedAt() != null) {
+            throw new ResourceNotFoundException(USER_NOT_FOUND);
+        }
+
+        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Page<UserFollow> result = userFollowRepository.findByFollowedUserId(userId, pageable);
+
+        return new PageResponse<>(
+                result.getContent().stream()
+                        .map(follow -> {
+                            AppUser user = appUserRepository.findById(follow.getFollowerUserId()).orElse(null);
+                            return new FollowUserItemResponse(
+                                    follow.getFollowerUserId(),
+                                    user != null ? user.getDisplayName() : null
+                            );
+                        })
+                        .toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
+    }
+
+    public FollowCheckResponse isFollowing(Integer userId) {
+        AppUser currentUser = getAuthenticatedUser();
+
+        boolean following = userFollowRepository.existsByFollowerUserIdAndFollowedUserId(currentUser.getId(), userId);
+
+        return new FollowCheckResponse(following);
+    }
+
+    public FollowCountResponse countFollowers(Integer userId) {
+        AppUser targetUser = appUserRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
+
+        if (targetUser.getDeletedAt() != null) {
+            throw new ResourceNotFoundException(USER_NOT_FOUND);
+        }
+
+        long count = userFollowRepository.countByFollowedUserId(userId);
+        return new FollowCountResponse(count);
+    }
+
+    private AppUser getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new UnauthorizedException("No autenticado");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof CustomUserDetails userDetails)) {
+            throw new UnauthorizedException("No autenticado");
+        }
+
+        return appUserRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new UnauthorizedException(USER_NOT_FOUND));
+    }
+
+    private Pageable buildPageable(int page, int size, String sort) {
+        String[] sortParts = sort.split(",");
+        String field = sortParts[0];
+        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+
+        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
+    }
+
+    private String mapSortField(String field) {
+        return switch (field) {
+            case "followerUserId" -> "followerUserId";
+            case "followedUserId" -> "followedUserId";
+            default -> "createdAt";
+        };
+    }
+}
