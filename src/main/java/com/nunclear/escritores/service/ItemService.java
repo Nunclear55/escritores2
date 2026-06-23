@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
 import com.nunclear.escritores.dto.request.CreateItemRequest;
 import com.nunclear.escritores.dto.request.UpdateItemRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -11,11 +13,8 @@ import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.ItemRepository;
 import com.nunclear.escritores.repository.StoryRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -167,44 +166,15 @@ public class ItemService {
     }
 
     private boolean isModeratorOrAdmin(AppUser user) {
-        return "moderator".equals(user.getAccessLevel().name()) || "admin".equals(user.getAccessLevel().name());
+        return AuthUtils.isModeratorOrAdmin(user);
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / validación defensiva insuficiente.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        // Mala práctica corregida:
-        // try/catch vacío.
-        // Tipo: swallowing exceptions / ocultar errores.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            return null;
-        }
-
-        return appUserRepository.findById(userDetails.getId()).orElse(null);
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private Pageable buildPageable(int page, int size, String sort) {

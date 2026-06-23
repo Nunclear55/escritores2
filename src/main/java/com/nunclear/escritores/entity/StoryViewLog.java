@@ -1,5 +1,7 @@
 package com.nunclear.escritores.entity;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,7 +42,7 @@ public class StoryViewLog {
     @PrePersist
     public void prePersist() {
         if (this.viewedAt == null) {
-            this.viewedAt = LocalDateTime.now();
+            this.viewedAt = AppClock.now();
         }
     }
 }

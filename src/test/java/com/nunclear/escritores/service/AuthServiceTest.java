@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
@@ -30,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -85,7 +88,7 @@ class AuthServiceTest {
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(invocation -> {
             AppUser u = invocation.getArgument(0);
             u.setId(1);
-            u.setCreatedAt(LocalDateTime.now());
+            u.setCreatedAt(AppClock.now());
             return u;
         });
 
@@ -224,7 +227,7 @@ class AuthServiceTest {
         LoginRequest request = new LoginRequest("usuario1", "Password123");
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setDeletedAt(LocalDateTime.now());
+        user.setDeletedAt(AppClock.now());
 
         when(appUserRepository.findByLoginNameIgnoreCaseOrEmailAddressIgnoreCase("usuario1", "usuario1"))
                 .thenReturn(Optional.of(user));
@@ -285,7 +288,7 @@ class AuthServiceTest {
         session.setUserId(10);
         session.setSessionIdentifier("session-old");
         session.setRefreshTokenHash(refreshHash);
-        session.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+        session.setExpiresAt(AppClock.now().plusMinutes(10));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
         user.setAccessLevel(AccessLevel.user);
@@ -332,7 +335,7 @@ class AuthServiceTest {
         UserSession session = new UserSession();
         session.setUserId(10);
         session.setRefreshTokenHash(refreshHash);
-        session.setExpiresAt(LocalDateTime.now().minusSeconds(1));
+        session.setExpiresAt(AppClock.now().minusSeconds(1));
 
         when(userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash))
                 .thenReturn(Optional.of(session));
@@ -353,7 +356,7 @@ class AuthServiceTest {
         UserSession session = new UserSession();
         session.setUserId(999);
         session.setRefreshTokenHash(refreshHash);
-        session.setExpiresAt(LocalDateTime.now().plusDays(1));
+        session.setExpiresAt(AppClock.now().plusDays(1));
 
         when(userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash))
                 .thenReturn(Optional.of(session));
@@ -378,7 +381,7 @@ class AuthServiceTest {
         session.setId(44L);
         session.setUserId(10);
         session.setRefreshTokenHash(refreshHash);
-        session.setExpiresAt(LocalDateTime.now().plusDays(1));
+        session.setExpiresAt(AppClock.now().plusDays(1));
 
         when(userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash))
                 .thenReturn(Optional.of(session));
@@ -517,7 +520,7 @@ class AuthServiceTest {
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUserId(10);
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        resetToken.setExpiresAt(AppClock.now().plusMinutes(30));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "old-hashed-pass");
 
@@ -543,7 +546,7 @@ class AuthServiceTest {
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUserId(10);
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        resetToken.setExpiresAt(AppClock.now().plusMinutes(30));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "old-hashed-pass");
 
@@ -588,7 +591,7 @@ class AuthServiceTest {
         String tokenHash = sha256Base64(rawResetToken);
 
         PasswordResetToken resetToken = new PasswordResetToken();
-        resetToken.setExpiresAt(LocalDateTime.now().minusSeconds(1));
+        resetToken.setExpiresAt(AppClock.now().minusSeconds(1));
 
         when(passwordResetTokenRepository.findByTokenHashAndUsedAtIsNull(tokenHash))
                 .thenReturn(Optional.of(resetToken));
@@ -608,7 +611,7 @@ class AuthServiceTest {
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUserId(999);
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        resetToken.setExpiresAt(AppClock.now().plusMinutes(30));
 
         when(passwordResetTokenRepository.findByTokenHashAndUsedAtIsNull(tokenHash))
                 .thenReturn(Optional.of(resetToken));
@@ -631,7 +634,7 @@ class AuthServiceTest {
 
         EmailVerificationToken emailToken = new EmailVerificationToken();
         emailToken.setUserId(10);
-        emailToken.setExpiresAt(LocalDateTime.now().plusHours(24));
+        emailToken.setExpiresAt(AppClock.now().plusHours(24));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
         user.setAccountState(AccountState.pending_verification);
@@ -672,7 +675,7 @@ class AuthServiceTest {
         String tokenHash = sha256Base64(rawVerificationToken);
 
         EmailVerificationToken emailToken = new EmailVerificationToken();
-        emailToken.setExpiresAt(LocalDateTime.now().minusHours(1));
+        emailToken.setExpiresAt(AppClock.now().minusHours(1));
 
         when(emailVerificationTokenRepository.findByTokenHashAndVerifiedAtIsNull(tokenHash))
                 .thenReturn(Optional.of(emailToken));
@@ -692,7 +695,7 @@ class AuthServiceTest {
 
         EmailVerificationToken emailToken = new EmailVerificationToken();
         emailToken.setUserId(999);
-        emailToken.setExpiresAt(LocalDateTime.now().plusHours(24));
+        emailToken.setExpiresAt(AppClock.now().plusHours(24));
 
         when(emailVerificationTokenRepository.findByTokenHashAndVerifiedAtIsNull(tokenHash))
                 .thenReturn(Optional.of(emailToken));
@@ -775,8 +778,8 @@ class AuthServiceTest {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashedBytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hashedBytes);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
         }
     }
 }

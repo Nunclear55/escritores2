@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
@@ -87,7 +89,7 @@ class UserServiceTest {
         AppUser user = mock(AppUser.class);
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
-        when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
+        when(user.getDeletedAt()).thenReturn(AppClock.now());
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -822,7 +824,7 @@ class UserServiceTest {
         AppUser user = mock(AppUser.class);
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
-        when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
+        when(user.getDeletedAt()).thenReturn(AppClock.now());
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -877,7 +879,7 @@ class UserServiceTest {
         AppUser user = mock(AppUser.class);
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
-        when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
+        when(user.getDeletedAt()).thenReturn(AppClock.now());
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,

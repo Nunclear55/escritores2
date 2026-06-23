@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
 import com.nunclear.escritores.dto.request.CreateFollowRequest;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
@@ -9,11 +11,8 @@ import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.UserFollowRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -143,20 +142,7 @@ public class FollowService {
     }
 
     private AppUser getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException(USER_NOT_FOUND));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private Pageable buildPageable(int page, int size, String sort) {

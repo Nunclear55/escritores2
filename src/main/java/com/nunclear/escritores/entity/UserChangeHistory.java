@@ -1,5 +1,7 @@
 package com.nunclear.escritores.entity;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,7 +39,7 @@ public class UserChangeHistory {
     @PrePersist
     public void prePersist() {
         if (this.changedAt == null) {
-            this.changedAt = LocalDateTime.now();
+            this.changedAt = AppClock.now();
         }
     }
 }

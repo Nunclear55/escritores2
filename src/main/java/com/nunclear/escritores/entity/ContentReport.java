@@ -1,5 +1,6 @@
 package com.nunclear.escritores.entity;
 
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +11,7 @@ import java.time.LocalDateTime;
 @Table(name = "content_report")
 @Getter
 @Setter
-public class ContentReport {
+public class ContentReport extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,24 +47,12 @@ public class ContentReport {
     @Column(name = "resolution_text", columnDefinition = "TEXT")
     private String resolutionText;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     @PrePersist
     public void prePersist() {
-        LocalDateTime now = LocalDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
         if (this.statusName == null || this.statusName.isBlank()) {
             this.statusName = "pending";
         }
     }
 
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 }

@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
 import com.nunclear.escritores.dto.request.HideCommentRequest;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
@@ -10,12 +12,12 @@ import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.ContentReportRepository;
 import com.nunclear.escritores.repository.StoryCommentRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -95,19 +97,7 @@ public class CommentModerationService {
         Page<ContentReport> reports = contentReportRepository.findPendingCommentReports(pageable);
 
         var content = reports.getContent().stream()
-                .map(report -> {
-                    StoryComment comment = storyCommentRepository.findById(report.getCommentId()).orElse(null);
-                    if (comment == null) {
-                        return null;
-                    }
-                    long reportsCount = contentReportRepository.countByCommentIdValue(comment.getId());
-                    return new ReportedCommentItemResponse(
-                            comment.getId(),
-                            reportsCount,
-                            comment.getContent()
-                    );
-                })
-                .filter(java.util.Objects::nonNull)
+                .flatMap(report -> buildReportedCommentItem(report).stream())
                 .distinct()
                 .toList();
 
@@ -118,6 +108,18 @@ public class CommentModerationService {
                 reports.getTotalElements(),
                 reports.getTotalPages()
         );
+    }
+
+    private Optional<ReportedCommentItemResponse> buildReportedCommentItem(ContentReport report) {
+        return storyCommentRepository.findById(report.getCommentId())
+                .map(comment -> {
+                    long reportsCount = contentReportRepository.countByCommentIdValue(comment.getId());
+                    return new ReportedCommentItemResponse(
+                            comment.getId(),
+                            reportsCount,
+                            comment.getContent()
+                    );
+                });
     }
 
     public PageResponse<ModerationQueueItemResponse> getModerationQueue(int page, int size) {
@@ -147,17 +149,9 @@ public class CommentModerationService {
     }
 
     private AppUser getAuthenticatedModeratorOrAdmin() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        AppUser user = appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
-
-        String role = user.getAccessLevel().name();
-        if (!"moderator".equalsIgnoreCase(role) && !"admin".equalsIgnoreCase(role)) {
+        if (!AuthUtils.isModeratorOrAdmin(user)) {
             throw new UnauthorizedException("No autorizado");
         }
 

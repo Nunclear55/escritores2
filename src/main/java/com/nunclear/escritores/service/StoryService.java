@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.CreateStoryRequest;
 import com.nunclear.escritores.dto.request.DuplicateStoryRequest;
 import com.nunclear.escritores.dto.request.UpdateStoryRequest;
@@ -11,11 +15,8 @@ import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.StoryRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
@@ -61,7 +62,7 @@ public class StoryService {
         story.setStartedOn(request.startedOn());
 
         if (PUBLICATION_PUBLISHED.equalsIgnoreCase(request.publicationState())) {
-            story.setPublishedAt(LocalDateTime.now());
+            story.setPublishedAt(AppClock.now());
         }
 
         Story saved = storyRepository.save(story);
@@ -279,7 +280,7 @@ public class StoryService {
         Story story = getEditableStory(id);
 
         story.setPublicationState(PUBLICATION_PUBLISHED);
-        story.setPublishedAt(LocalDateTime.now());
+        story.setPublishedAt(AppClock.now());
 
         Story saved = storyRepository.save(story);
 
@@ -308,7 +309,7 @@ public class StoryService {
     public StoryArchiveResponse archiveStory(Integer id) {
         Story story = getEditableStory(id);
 
-        story.setArchivedAt(LocalDateTime.now());
+        story.setArchivedAt(AppClock.now());
 
         Story saved = storyRepository.save(story);
 
@@ -417,48 +418,15 @@ public class StoryService {
     }
 
     private boolean isModeratorOrAdmin(AppUser user) {
-        // Mala práctica corregida:
-        // strings mágicos repetidos para roles.
-        // Tipo: duplicación de literales / lógica repetida.
-        return ACCESS_MODERATOR.equals(user.getAccessLevel().name())
-                || ACCESS_ADMIN.equals(user.getAccessLevel().name());
+        return AuthUtils.isModeratorOrAdmin(user);
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / validación defensiva insuficiente.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        // Mala práctica corregida:
-        // catch vacío o demasiado genérico para ocultar errores.
-        // Tipo: swallowing exceptions / ocultamiento silencioso de fallos.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            return null;
-        }
-
-        return appUserRepository.findById(userDetails.getId()).orElse(null);
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private void validateVisibilityState(String visibilityState) {

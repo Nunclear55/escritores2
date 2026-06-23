@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.CreateStoryRequest;
 import com.nunclear.escritores.dto.request.DuplicateStoryRequest;
 import com.nunclear.escritores.dto.request.UpdateStoryRequest;
@@ -127,7 +129,7 @@ class StoryServiceTest {
         when(saved.getSlugText()).thenReturn("historia-publicada");
         when(saved.getVisibilityState()).thenReturn("public");
         when(saved.getPublicationState()).thenReturn("published");
-        when(saved.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(saved.getCreatedAt()).thenReturn(AppClock.now());
 
         CreateStoryRequest request = new CreateStoryRequest(
                 "Historia Publicada",
@@ -227,7 +229,7 @@ class StoryServiceTest {
         when(saved.getSlugText()).thenReturn("mi-historia-2");
         when(saved.getVisibilityState()).thenReturn("public");
         when(saved.getPublicationState()).thenReturn("draft");
-        when(saved.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(saved.getCreatedAt()).thenReturn(AppClock.now());
 
         CreateStoryRequest request = new CreateStoryRequest(
                 "Mi Historia",
@@ -845,7 +847,7 @@ class StoryServiceTest {
         Story story = mock(Story.class);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
-        when(story.getArchivedAt()).thenReturn(LocalDateTime.now());
+        when(story.getArchivedAt()).thenReturn(AppClock.now());
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,

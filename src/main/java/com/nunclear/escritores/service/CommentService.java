@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.CreateCommentRequest;
 import com.nunclear.escritores.dto.request.UpdateCommentRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -8,11 +12,8 @@ import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -195,7 +196,7 @@ public class CommentService {
         validateCanEditComment(comment);
 
         comment.setContent(request.content());
-        comment.setEditedAt(LocalDateTime.now());
+        comment.setEditedAt(AppClock.now());
 
         StoryComment saved = storyCommentRepository.save(comment);
 
@@ -212,7 +213,7 @@ public class CommentService {
 
         validateCanEditComment(comment);
 
-        comment.setDeletedAt(LocalDateTime.now());
+        comment.setDeletedAt(AppClock.now());
         comment.setVisibilityState(VISIBILITY_DELETED);
         storyCommentRepository.save(comment);
 
@@ -326,34 +327,15 @@ public class CommentService {
     }
 
     private boolean isModeratorOrAdmin(AppUser user) {
-        String accessLevel = user.getAccessLevel().name();
-        return ROLE_MODERATOR.equalsIgnoreCase(accessLevel)
-                || ROLE_ADMIN.equalsIgnoreCase(accessLevel);
+        return AuthUtils.isModeratorOrAdmin(user);
     }
 
     private AppUser getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException(MSG_NOT_AUTHENTICATED);
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
-                return appUserRepository.findById(userDetails.getId()).orElse(null);
-            }
-        } catch (RuntimeException ignored) {
-            // Si el contexto de seguridad no está disponible, se trata como usuario anónimo.
-        }
-
-        return null;
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private Pageable buildPageable(int page, int size, String sort) {

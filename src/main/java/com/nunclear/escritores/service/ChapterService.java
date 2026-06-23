@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
@@ -13,11 +17,8 @@ import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.ChapterRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import com.nunclear.escritores.repository.VolumeRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -243,7 +244,7 @@ public class ChapterService {
         Chapter chapter = getEditableChapter(id);
         chapter.setPublicationState(PUBLICATION_STATE_PUBLISHED);
         if (chapter.getPublishedOn() == null) {
-            chapter.setPublishedOn(java.time.LocalDate.now());
+            chapter.setPublishedOn(AppClock.today());
         }
         Chapter saved = chapterRepository.save(chapter);
 
@@ -260,7 +261,7 @@ public class ChapterService {
 
     public ChapterArchiveResponse archiveChapter(Integer id) {
         Chapter chapter = getEditableChapter(id);
-        chapter.setArchivedAt(LocalDateTime.now());
+        chapter.setArchivedAt(AppClock.now());
         Chapter saved = chapterRepository.save(chapter);
 
         return new ChapterArchiveResponse(saved.getId(), saved.getArchivedAt());
@@ -420,39 +421,15 @@ public class ChapterService {
     }
 
     private boolean isModeratorOrAdmin(AppUser user) {
-        return "moderator".equals(user.getAccessLevel().name()) || "admin".equals(user.getAccessLevel().name());
+        return AuthUtils.isModeratorOrAdmin(user);
     }
 
     private AppUser getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            return null;
-        }
-
-        return appUserRepository.findById(userDetails.getId()).orElse(null);
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private int calculateWordCount(String content) {

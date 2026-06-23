@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.CreateGlobalNoticeRequest;
 import com.nunclear.escritores.dto.request.UpdateGlobalNoticeRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -10,11 +14,8 @@ import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.GlobalNoticeRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -81,7 +82,7 @@ public class GlobalNoticeService {
 
     public PageResponse<GlobalNoticeListItemResponse> getActiveNotices(int page, int size, String sort) {
         Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "startsAt,desc" : sort);
-        Page<GlobalNotice> result = globalNoticeRepository.findActiveNotices(LocalDateTime.now(), pageable);
+        Page<GlobalNotice> result = globalNoticeRepository.findActiveNotices(AppClock.now(), pageable);
 
         return new PageResponse<>(
                 result.getContent().stream()
@@ -183,7 +184,7 @@ public class GlobalNoticeService {
     }
 
     private boolean isPubliclyReadable(GlobalNotice notice) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
 
         return Boolean.TRUE.equals(notice.getIsEnabled())
                 && Boolean.FALSE.equals(notice.getArchived())
@@ -217,41 +218,11 @@ public class GlobalNoticeService {
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / falta de validación defensiva.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        // Mala práctica corregida:
-        // catch vacío.
-        // Tipo: swallowing exceptions / ocultamiento silencioso de errores.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            return null;
-        }
-
-        return appUserRepository.findById(userDetails.getId()).orElse(null);
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private Pageable buildPageable(int page, int size, String sort) {

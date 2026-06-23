@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.*;
@@ -7,11 +11,8 @@ import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -186,7 +187,7 @@ public class ReportService {
         }
 
         report.setReviewedByUserId(reviewer.getId());
-        report.setReviewedAt(LocalDateTime.now());
+        report.setReviewedAt(AppClock.now());
         report.setStatusName("reviewed");
 
         ContentReport saved = contentReportRepository.save(report);
@@ -205,7 +206,7 @@ public class ReportService {
                 .orElseThrow(() -> new ResourceNotFoundException(REPORT_NOT_FOUND));
 
         report.setReviewedByUserId(moderator.getId());
-        report.setReviewedAt(LocalDateTime.now());
+        report.setReviewedAt(AppClock.now());
         report.setResolutionText(request.resolutionText());
         report.setStatusName("reviewed");
 
@@ -225,7 +226,7 @@ public class ReportService {
                 .orElseThrow(() -> new ResourceNotFoundException(REPORT_NOT_FOUND));
 
         report.setReviewedByUserId(moderator.getId());
-        report.setReviewedAt(LocalDateTime.now());
+        report.setReviewedAt(AppClock.now());
         report.setResolutionText(request.resolutionText());
         report.setStatusName("resolved");
 
@@ -245,7 +246,7 @@ public class ReportService {
                 .orElseThrow(() -> new ResourceNotFoundException(REPORT_NOT_FOUND));
 
         report.setReviewedByUserId(moderator.getId());
-        report.setReviewedAt(LocalDateTime.now());
+        report.setReviewedAt(AppClock.now());
         report.setResolutionText(request.resolutionText());
         report.setStatusName("resolved");
 
@@ -302,23 +303,7 @@ public class ReportService {
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / falta de validación defensiva.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser getAuthenticatedModeratorOrAdmin() {

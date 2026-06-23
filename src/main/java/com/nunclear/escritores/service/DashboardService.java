@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.ContentReport;
@@ -8,10 +12,8 @@ import com.nunclear.escritores.entity.StoryComment;
 import com.nunclear.escritores.entity.StoryRating;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -105,7 +107,7 @@ public class DashboardService {
         long storiesCount = storyRepository.countByArchivedAtIsNull();
         long pendingReportsCount = contentReportRepository.countByStatusNameIgnoreCase("pending");
         long activeSanctionsCount = userSanctionRepository.countByIsActiveTrue();
-        long activeNoticesCount = globalNoticeRepository.countActiveNotices(LocalDateTime.now());
+        long activeNoticesCount = globalNoticeRepository.countActiveNotices(AppClock.now());
 
         return new AdminDashboardSummaryResponse(
                 usersCount,
@@ -168,13 +170,7 @@ public class DashboardService {
     }
 
     private AppUser getAuthenticatedUser() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private Pageable buildPageable(int page, int size, String sort) {

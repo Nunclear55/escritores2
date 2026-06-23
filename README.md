@@ -385,3 +385,52 @@ Para preguntas o sugerencias, contacta al equipo de desarrollo.
 **Versión:** 0.0.1  
 **Última actualización:** Abril 2024  
 **Estado:** En desarrollo
+
+## Calidad de código y SonarCloud
+
+El proyecto incluye configuración para que SonarCloud pueda leer la cobertura generada por JaCoCo.
+
+### Variables obligatorias
+
+Antes de ejecutar localmente o en CI/CD, define estas variables:
+
+```bash
+export DB_URL="jdbc:mysql://localhost:3306/historias_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+export DB_USERNAME="root"
+export DB_PASSWORD="tu_password"
+export JWT_SECRET="clave-jwt-segura-de-al-menos-32-caracteres"
+```
+
+### Ejecutar pruebas con cobertura
+
+```bash
+./mvnw clean verify
+```
+
+El reporte XML que SonarCloud necesita queda en:
+
+```text
+target/site/jacoco/jacoco.xml
+```
+
+### Enviar análisis a SonarCloud
+
+```bash
+./mvnw sonar:sonar -Dsonar.token=$SONAR_TOKEN
+```
+
+En Jenkins crea estas credenciales antes de ejecutar el pipeline:
+
+- `mysql-root-password`
+- `jwt-secret`
+- `sonar-token`
+
+### Cambios aplicados para mejorar Sonar
+
+- Se centralizó la fecha/hora en `AppClock` usando zona horaria explícita UTC.
+- Se reutilizó `Auditable` en entidades con `createdAt` y `updatedAt` para reducir duplicación.
+- Se centralizó la obtención del usuario autenticado con `AuthUtils`.
+- Se eliminó configuración duplicada del `pom.xml`.
+- Se activó JaCoCo para generar cobertura en `verify`.
+- Se agregó `sonar-project.properties` con la ruta del reporte de cobertura.
+- Se movieron secretos y credenciales a variables de entorno.

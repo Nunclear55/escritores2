@@ -1,5 +1,7 @@
 package com.nunclear.escritores.exception;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,7 @@ public class GlobalExceptionHandler {
         }
 
         ValidationErrorResponse response = new ValidationErrorResponse(
-                LocalDateTime.now(),
+                AppClock.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 errors
         );
@@ -66,7 +68,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(HttpStatus status, String message) {
         ApiErrorResponse response = new ApiErrorResponse(
-                LocalDateTime.now(),
+                AppClock.now(),
                 status.value(),
                 message
         );

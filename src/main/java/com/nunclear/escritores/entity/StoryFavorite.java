@@ -1,5 +1,7 @@
 package com.nunclear.escritores.entity;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,6 +34,6 @@ public class StoryFavorite {
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = AppClock.now();
     }
 }

@@ -1,5 +1,7 @@
 package com.nunclear.escritores.entity;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -59,6 +61,6 @@ public abstract class BaseToken {
      */
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = AppClock.now();
     }
 }

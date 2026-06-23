@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.UpdateUserAccessLevelRequest;
 import com.nunclear.escritores.dto.request.UpdateUserAccountStateRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -415,7 +417,7 @@ class AdminUserServiceTest {
     void deberiaLanzarResourceNotFound_siUsuarioObjetivoEstaEliminado() {
         AppUser user = mock(AppUser.class);
         when(appUserRepository.findById(123)).thenReturn(Optional.of(user));
-        when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
+        when(user.getDeletedAt()).thenReturn(AppClock.now());
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,

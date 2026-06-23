@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.*;
@@ -8,11 +12,8 @@ import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -153,7 +154,7 @@ public class UserService {
         appUserRepository.save(user);
 
         for (UserSession session : userSessionRepository.findByUserIdAndRevokedAtIsNull(user.getId())) {
-            session.setRevokedAt(LocalDateTime.now());
+            session.setRevokedAt(AppClock.now());
             userSessionRepository.save(session);
         }
 
@@ -176,7 +177,7 @@ public class UserService {
         }
 
         user.setPendingEmailAddress(request.newEmailAddress());
-        user.setEmailChangeRequestedAt(LocalDateTime.now());
+        user.setEmailChangeRequestedAt(AppClock.now());
         appUserRepository.save(user);
 
         return new ChangeEmailResponse(
@@ -189,11 +190,11 @@ public class UserService {
         AppUser user = getAuthenticatedUser();
 
         user.setAccountState(AccountState.banned);
-        user.setDeletedAt(LocalDateTime.now());
+        user.setDeletedAt(AppClock.now());
         appUserRepository.save(user);
 
         for (UserSession session : userSessionRepository.findByUserIdAndRevokedAtIsNull(user.getId())) {
-            session.setRevokedAt(LocalDateTime.now());
+            session.setRevokedAt(AppClock.now());
             userSessionRepository.save(session);
         }
 
@@ -253,23 +254,7 @@ public class UserService {
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / falta de validación defensiva.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException(USER_NOT_FOUND));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private void validatePublicReadable(AppUser user) {

@@ -8,6 +8,10 @@ pipeline {
         APP_PORT = '8080'
         MYSQL_HOST = 'escritores-mysql'
         MYSQL_DATABASE = 'historias_db'
+        DB_USERNAME = 'root'
+        DB_PASSWORD = credentials('mysql-root-password')
+        JWT_SECRET = credentials('jwt-secret')
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
@@ -17,16 +21,21 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Test and Coverage') {
             steps {
                 sh 'chmod +x mvnw'
-                sh './mvnw test -Dmaven.test.failure.ignore=true'
+                sh './mvnw -B clean verify'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
+                }
             }
         }
 
-        stage('Build JAR') {
+        stage('SonarCloud') {
             steps {
-                sh './mvnw clean package -DskipTests'
+                sh './mvnw -B sonar:sonar -Dsonar.token=$SONAR_TOKEN'
             }
         }
 
@@ -49,10 +58,10 @@ pipeline {
                       --restart always \
                       --network $DOCKER_NETWORK \
                       -p $APP_PORT:8080 \
-                      -e SPRING_DATASOURCE_URL="jdbc:mysql://$MYSQL_HOST:3306/$MYSQL_DATABASE?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
-                      -e SPRING_DATASOURCE_USERNAME="root" \
-                      -e SPRING_DATASOURCE_PASSWORD="RootPasswordSeguro123" \
-                      -e JWT_SECRET="CambiaEstaClaveJWTMuySeguraDeMasDe32Caracteres123456" \
+                      -e DB_URL="jdbc:mysql://$MYSQL_HOST:3306/$MYSQL_DATABASE?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
+                      -e DB_USERNAME="$DB_USERNAME" \
+                      -e DB_PASSWORD="$DB_PASSWORD" \
+                      -e JWT_SECRET="$JWT_SECRET" \
                       $IMAGE_NAME:latest
                 '''
             }
@@ -61,7 +70,7 @@ pipeline {
 
     post {
         success {
-            echo 'Backend desplegado correctamente en http://100.54.216.197:8080'
+            echo 'Backend desplegado correctamente.'
         }
         failure {
             echo 'Falló el pipeline del backend.'

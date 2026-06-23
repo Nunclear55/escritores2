@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.UpdateUserAccessLevelRequest;
 import com.nunclear.escritores.dto.request.UpdateUserAccountStateRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -13,11 +17,8 @@ import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.UserChangeHistoryRepository;
 import com.nunclear.escritores.repository.UserSessionRepository;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -186,7 +187,7 @@ public class AdminUserService {
         history.setOldValue(oldValue);
         history.setNewValue(newValue);
         history.setChangedByUserId(changedByUserId);
-        history.setChangedAt(LocalDateTime.now());
+        history.setChangedAt(AppClock.now());
 
         userChangeHistoryRepository.save(history);
     }
@@ -194,7 +195,7 @@ public class AdminUserService {
     private void revokeAllSessions(Integer userId) {
         userSessionRepository.findByUserIdAndRevokedAtIsNull(userId)
                 .forEach(session -> {
-                    session.setRevokedAt(LocalDateTime.now());
+                    session.setRevokedAt(AppClock.now());
                     userSessionRepository.save(session);
                 });
     }
@@ -211,34 +212,29 @@ public class AdminUserService {
     }
 
     private AppUser getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AccessLevel parseAccessLevel(String accessLevel) {
+        if (accessLevel == null || accessLevel.isBlank()) {
+            throw new BadRequestException("accessLevel inválido");
+        }
+
         try {
             return AccessLevel.valueOf(accessLevel.trim().toLowerCase());
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
             throw new BadRequestException("accessLevel inválido");
         }
     }
 
     private AccountState parseAccountState(String accountState) {
+        if (accountState == null || accountState.isBlank()) {
+            throw new BadRequestException("accountState inválido");
+        }
+
         try {
             return AccountState.valueOf(accountState.trim().toLowerCase());
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
             throw new BadRequestException("accountState inválido");
         }
     }

@@ -1,5 +1,7 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
 import com.nunclear.escritores.dto.request.RegisterChapterViewRequest;
 import com.nunclear.escritores.dto.request.RegisterStoryViewRequest;
 import com.nunclear.escritores.dto.response.*;
@@ -8,12 +10,11 @@ import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -123,6 +124,25 @@ public class MetricsService {
         );
     }
 
+    private Optional<TopViewedStoryItemResponse> buildTopViewedStoryItem(Object[] row) {
+        Integer storyId = (Integer) row[0];
+        Long views = (Long) row[1];
+
+        return storyRepository.findById(storyId)
+                .filter(this::isPublicReadableStory)
+                .map(story -> new TopViewedStoryItemResponse(
+                        story.getId(),
+                        story.getTitle(),
+                        views
+                ));
+    }
+
+    private boolean isPublicReadableStory(Story story) {
+        return VISIBILITY_PUBLIC.equalsIgnoreCase(story.getVisibilityState())
+                && PUBLICATION_PUBLISHED.equalsIgnoreCase(story.getPublicationState())
+                && story.getArchivedAt() == null;
+    }
+
     public AuthorMetricsResponse getAuthorMetrics(Integer userId) {
         AppUser currentUser = getAuthenticatedUser();
 
@@ -145,31 +165,7 @@ public class MetricsService {
         Page<Object[]> result = storyViewLogRepository.findTopViewedStories(PageRequest.of(page, size));
 
         var content = result.getContent().stream()
-                .map(row -> {
-                    Integer storyId = (Integer) row[0];
-                    Long views = (Long) row[1];
-                    Story story = storyRepository.findById(storyId).orElse(null);
-
-                    if (story == null) {
-                        return null;
-                    }
-
-                    boolean publicReadable =
-                            VISIBILITY_PUBLIC.equalsIgnoreCase(story.getVisibilityState())
-                                    && PUBLICATION_PUBLISHED.equalsIgnoreCase(story.getPublicationState())
-                                    && story.getArchivedAt() == null;
-
-                    if (!publicReadable) {
-                        return null;
-                    }
-
-                    return new TopViewedStoryItemResponse(
-                            story.getId(),
-                            story.getTitle(),
-                            views
-                    );
-                })
-                .filter(java.util.Objects::nonNull)
+                .flatMap(row -> buildTopViewedStoryItem(row).stream())
                 .toList();
 
         return new PageResponse<>(
@@ -250,43 +246,14 @@ public class MetricsService {
     }
 
     private AppUser getAuthenticatedUser() {
-        // Mala práctica corregida:
-        // acceso directo a getAuthentication().getPrincipal() sin validar null.
-        // Tipo: riesgo de NullPointerException / falta de validación defensiva.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException("Usuario no encontrado"));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private AppUser tryGetAuthenticatedUser() {
-        // Mala práctica corregida:
-        // bloque catch vacío.
-        // Tipo: swallowing exceptions / ocultamiento silencioso de errores.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            return null;
-        }
-
-        return appUserRepository.findById(userDetails.getId()).orElse(null);
+        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
     }
 
     private boolean isModeratorOrAdmin(AppUser user) {
-        return "moderator".equals(user.getAccessLevel().name()) || "admin".equals(user.getAccessLevel().name());
+        return AuthUtils.isModeratorOrAdmin(user);
     }
 }

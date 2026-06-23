@@ -1,5 +1,9 @@
 package com.nunclear.escritores.service;
 
+import com.nunclear.escritores.util.AuthUtils;
+
+import com.nunclear.escritores.util.AppClock;
+
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
 import com.nunclear.escritores.entity.*;
@@ -9,15 +13,12 @@ import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ConflictException;
 import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
-import com.nunclear.escritores.security.CustomUserDetails;
 import com.nunclear.escritores.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -71,7 +72,7 @@ public class AuthService {
         EmailVerificationToken token = new EmailVerificationToken();
         token.setUserId(saved.getId());
         token.setTokenHash(hash(rawVerificationToken));
-        token.setExpiresAt(LocalDateTime.now().plusHours(24));
+        token.setExpiresAt(AppClock.now().plusHours(24));
         emailVerificationTokenRepository.save(token);
 
         log.debug("TOKEN VERIFICACION DEV: {}", rawVerificationToken);
@@ -104,7 +105,7 @@ public class AuthService {
             throw new UnauthorizedException("Credenciales inválidas");
         }
 
-        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginAt(AppClock.now());
         appUserRepository.save(user);
 
         String sessionId = UUID.randomUUID().toString();
@@ -120,7 +121,7 @@ public class AuthService {
         session.setUserId(user.getId());
         session.setSessionIdentifier(sessionId);
         session.setRefreshTokenHash(hash(rawRefreshToken));
-        session.setExpiresAt(LocalDateTime.now().plusSeconds(refreshExpirationSeconds));
+        session.setExpiresAt(AppClock.now().plusSeconds(refreshExpirationSeconds));
         session.setIpAddress(httpRequest.getRemoteAddr());
         session.setUserAgentText(httpRequest.getHeader("User-Agent"));
         userSessionRepository.save(session);
@@ -145,7 +146,7 @@ public class AuthService {
         UserSession session = userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash)
                 .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
 
-        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (session.getExpiresAt().isBefore(AppClock.now())) {
             throw new UnauthorizedException("Refresh token expirado");
         }
 
@@ -155,14 +156,14 @@ public class AuthService {
         String newSessionId = UUID.randomUUID().toString();
         String newRefreshToken = UUID.randomUUID().toString() + "." + UUID.randomUUID();
 
-        session.setRevokedAt(LocalDateTime.now());
+        session.setRevokedAt(AppClock.now());
         userSessionRepository.save(session);
 
         UserSession newSession = new UserSession();
         newSession.setUserId(user.getId());
         newSession.setSessionIdentifier(newSessionId);
         newSession.setRefreshTokenHash(hash(newRefreshToken));
-        newSession.setExpiresAt(LocalDateTime.now().plusSeconds(refreshExpirationSeconds));
+        newSession.setExpiresAt(AppClock.now().plusSeconds(refreshExpirationSeconds));
         userSessionRepository.save(newSession);
 
         String accessToken = jwtService.generateAccessToken(
@@ -186,7 +187,7 @@ public class AuthService {
         UserSession session = userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash)
                 .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
 
-        session.setRevokedAt(LocalDateTime.now());
+        session.setRevokedAt(AppClock.now());
         userSessionRepository.save(session);
 
         return new MessageResponse("Sesión cerrada correctamente");
@@ -210,7 +211,7 @@ public class AuthService {
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
         appUserRepository.findByEmailAddressIgnoreCase(request.emailAddress()).ifPresent(user -> {
             for (PasswordResetToken t : passwordResetTokenRepository.findByUserIdAndUsedAtIsNull(user.getId())) {
-                t.setUsedAt(LocalDateTime.now());
+                t.setUsedAt(AppClock.now());
                 passwordResetTokenRepository.save(t);
             }
 
@@ -218,7 +219,7 @@ public class AuthService {
             PasswordResetToken token = new PasswordResetToken();
             token.setUserId(user.getId());
             token.setTokenHash(hash(rawToken));
-            token.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+            token.setExpiresAt(AppClock.now().plusMinutes(30));
             passwordResetTokenRepository.save(token);
 
             log.debug("TOKEN RESET DEV: {}", rawToken);
@@ -232,7 +233,7 @@ public class AuthService {
                 .findByTokenHashAndUsedAtIsNull(hash(request.resetToken()))
                 .orElseThrow(() -> new BadRequestException("Token inválido"));
 
-        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (token.getExpiresAt().isBefore(AppClock.now())) {
             throw new BadRequestException("Token expirado");
         }
 
@@ -242,11 +243,11 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         appUserRepository.save(user);
 
-        token.setUsedAt(LocalDateTime.now());
+        token.setUsedAt(AppClock.now());
         passwordResetTokenRepository.save(token);
 
         for (UserSession session : userSessionRepository.findByUserIdAndRevokedAtIsNull(user.getId())) {
-            session.setRevokedAt(LocalDateTime.now());
+            session.setRevokedAt(AppClock.now());
             userSessionRepository.save(session);
         }
 
@@ -258,17 +259,17 @@ public class AuthService {
                 .findByTokenHashAndVerifiedAtIsNull(hash(request.verificationToken()))
                 .orElseThrow(() -> new BadRequestException("Token inválido"));
 
-        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (token.getExpiresAt().isBefore(AppClock.now())) {
             throw new BadRequestException("Token expirado");
         }
 
         AppUser user = appUserRepository.findById(token.getUserId())
                 .orElseThrow(() -> new BadRequestException(USER_NOT_FOUND));
 
-        token.setVerifiedAt(LocalDateTime.now());
+        token.setVerifiedAt(AppClock.now());
         emailVerificationTokenRepository.save(token);
 
-        user.setEmailVerifiedAt(LocalDateTime.now());
+        user.setEmailVerifiedAt(AppClock.now());
         user.setAccountState(AccountState.active);
         appUserRepository.save(user);
 
@@ -279,7 +280,7 @@ public class AuthService {
         AppUser user = getAuthenticatedUser();
 
         for (UserSession session : userSessionRepository.findByUserIdAndRevokedAtIsNull(user.getId())) {
-            session.setRevokedAt(LocalDateTime.now());
+            session.setRevokedAt(AppClock.now());
             userSessionRepository.save(session);
         }
 
@@ -287,20 +288,7 @@ public class AuthService {
     }
 
     private AppUser getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new UnauthorizedException("No autenticado");
-        }
-
-        return appUserRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedException(USER_NOT_FOUND));
+        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private String hash(String value) {

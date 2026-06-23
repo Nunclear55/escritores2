@@ -1,5 +1,7 @@
 package com.nunclear.escritores.entity;
 
+import com.nunclear.escritores.util.AppClock;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
@@ -43,7 +45,7 @@ public abstract class Auditable {
      */
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = AppClock.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -55,6 +57,6 @@ public abstract class Auditable {
      */
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = AppClock.now();
     }
 }
