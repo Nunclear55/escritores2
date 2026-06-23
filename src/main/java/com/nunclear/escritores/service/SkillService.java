@@ -1,21 +1,20 @@
 package com.nunclear.escritores.service;
 
-import com.nunclear.escritores.util.AuthUtils;
 
 import com.nunclear.escritores.dto.request.CreateSkillRequest;
 import com.nunclear.escritores.dto.request.UpdateSkillRequest;
 import com.nunclear.escritores.dto.response.*;
-import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.Skill;
 import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.SkillRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -24,14 +23,13 @@ public class SkillService {
     // Mala práctica corregida:
     // repetición de literales ("magic strings").
     // Tipo: duplicación de cadenas / baja mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
 
     private final SkillRepository skillRepository;
     private final StoryRepository storyRepository;
     private final AppUserRepository appUserRepository;
 
     public CreateSkillResponse createSkill(CreateSkillRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         Skill skill = new Skill();
         skill.setStoryId(story.getId());
@@ -56,9 +54,9 @@ public class SkillService {
                 .orElseThrow(() -> new ResourceNotFoundException("Habilidad no encontrada"));
 
         Story story = storyRepository.findById(skill.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new SkillDetailResponse(
                 skill.getId(),
@@ -77,11 +75,11 @@ public class SkillService {
             String sort
     ) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort, "name", "createdAt", "updatedAt", "categoryName");
         Page<Skill> result = skillRepository.findByStoryWithFilters(storyId, categoryName, pageable);
 
         return new PageResponse<>(
@@ -100,13 +98,13 @@ public class SkillService {
     }
 
     public PageResponse<SkillSearchItemResponse> searchSkills(String q, int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort, "name", "createdAt", "updatedAt", "categoryName");
         Page<Skill> result = skillRepository.searchByName(q == null ? "" : q, pageable);
 
         var content = result.getContent().stream()
                 .filter(skill -> {
                     Story story = storyRepository.findById(skill.getStoryId()).orElse(null);
-                    return story != null && canReadStory(story);
+                    return story != null && StoryAccessUtils.canReadStory(story, appUserRepository);
                 })
                 .map(skill -> new SkillSearchItemResponse(
                         skill.getId(),
@@ -139,76 +137,8 @@ public class SkillService {
     private Skill getEditableSkill(Integer id) {
         Skill skill = skillRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Habilidad no encontrada"));
-        getEditableStory(skill.getStoryId());
+        StoryAccessUtils.getEditableStory(skill.getStoryId(), storyRepository, appUserRepository);
         return skill;
     }
 
-    private Story getEditableStory(Integer storyId) {
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos sobre esta historia");
-        }
-
-        return story;
-    }
-
-    private void validateReadAccess(Story story) {
-        if (!canReadStory(story)) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
-    private boolean canReadStory(Story story) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicReadable) {
-            return true;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            return false;
-        }
-
-        return story.getOwnerUserId().equals(currentUser.getId()) || isModeratorOrAdmin(currentUser);
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            case "categoryName" -> "categoryName";
-            default -> "name";
-        };
-    }
 }

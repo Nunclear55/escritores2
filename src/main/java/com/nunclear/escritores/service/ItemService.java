@@ -1,21 +1,20 @@
 package com.nunclear.escritores.service;
 
-import com.nunclear.escritores.util.AuthUtils;
 
 import com.nunclear.escritores.dto.request.CreateItemRequest;
 import com.nunclear.escritores.dto.request.UpdateItemRequest;
 import com.nunclear.escritores.dto.response.*;
-import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.Item;
 import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.ItemRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -24,14 +23,13 @@ public class ItemService {
     // Mala práctica corregida:
     // literal duplicado.
     // Tipo: duplicación de cadenas mágicas / menor mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
 
     private final ItemRepository itemRepository;
     private final StoryRepository storyRepository;
     private final AppUserRepository appUserRepository;
 
     public CreateItemResponse createItem(CreateItemRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         Item item = new Item();
         item.setStoryId(story.getId());
@@ -54,9 +52,9 @@ public class ItemService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ítem no encontrado"));
 
         Story story = storyRepository.findById(item.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new ItemDetailResponse(
                 item.getId(),
@@ -76,11 +74,11 @@ public class ItemService {
             String sort
     ) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "name,asc" : sort, "name", "createdAt", "updatedAt");
         Page<Item> result = itemRepository.findByStoryWithNameFilter(storyId, name, pageable);
 
         return new PageResponse<>(
@@ -123,74 +121,8 @@ public class ItemService {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ítem no encontrado"));
 
-        getEditableStory(item.getStoryId());
+        StoryAccessUtils.getEditableStory(item.getStoryId(), storyRepository, appUserRepository);
         return item;
     }
 
-    private Story getEditableStory(Integer storyId) {
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos sobre esta historia");
-        }
-
-        return story;
-    }
-
-    private void validateReadAccess(Story story) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            default -> "name";
-        };
-    }
 }

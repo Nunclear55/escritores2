@@ -12,7 +12,6 @@ import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +19,10 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
-import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +31,6 @@ public class StoryService {
     // Mala práctica corregida:
     // strings mágicos repetidos.
     // Tipo: duplicación de literales / baja mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
     private static final String PUBLICATION_PUBLISHED = "published";
     private static final String PUBLICATION_DRAFT = "draft";
     private static final String VISIBILITY_PUBLIC = "public";
@@ -44,7 +43,7 @@ public class StoryService {
     private final AppUserRepository appUserRepository;
 
     public CreateStoryResponse createStory(CreateStoryRequest request) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         validateVisibilityState(request.visibilityState());
         validatePublicationState(request.publicationState());
@@ -80,9 +79,9 @@ public class StoryService {
 
     public StoryDetailResponse getStoryById(Integer id) {
         Story story = storyRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new StoryDetailResponse(
                 story.getId(),
@@ -97,9 +96,9 @@ public class StoryService {
 
     public StorySlugResponse getStoryBySlug(String slug) {
         Story story = storyRepository.findBySlugText(slug)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new StorySlugResponse(
                 story.getId(),
@@ -109,7 +108,7 @@ public class StoryService {
     }
 
     public PageResponse<StoryListItemResponse> listPublicStories(int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, SORT_CREATED_AT, "updatedAt", "title", "publishedAt");
 
         Page<Story> result = storyRepository.findByVisibilityStateIgnoreCaseAndPublicationStateIgnoreCaseAndArchivedAtIsNull(
                 VISIBILITY_PUBLIC,
@@ -149,7 +148,7 @@ public class StoryService {
             throw new BadRequestException("Solo se permite búsqueda pública de historias publicadas");
         }
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, SORT_CREATED_AT, "updatedAt", "title", "publishedAt");
 
         Page<Story> result = storyRepository.searchPublicStories(
                 q == null ? "" : q,
@@ -182,7 +181,7 @@ public class StoryService {
             int size,
             String sort
     ) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, SORT_CREATED_AT, "updatedAt", "title", "publishedAt");
 
         Page<Story> result;
         if (canSeePrivateStories(userId) && includeDrafts) {
@@ -208,8 +207,8 @@ public class StoryService {
     }
 
     public PageResponse<UserStorySummaryResponse> getMyDrafts(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort);
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort, SORT_CREATED_AT, "updatedAt", "title", "publishedAt");
 
         Page<Story> result = storyRepository.findByOwnerUserIdAndPublicationStateIgnoreCaseAndArchivedAtIsNull(
                 currentUser.getId(),
@@ -234,8 +233,8 @@ public class StoryService {
     }
 
     public PageResponse<ArchivedStoryItemResponse> getMyArchived(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort);
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort, SORT_CREATED_AT, "updatedAt", "title", "publishedAt");
 
         Page<Story> result = storyRepository.findByOwnerUserIdAndArchivedAtIsNotNull(currentUser.getId(), pageable);
 
@@ -255,7 +254,7 @@ public class StoryService {
     }
 
     public UpdateStoryResponse updateStory(Integer id, UpdateStoryRequest request) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
 
         validateVisibilityState(request.visibilityState());
 
@@ -277,7 +276,7 @@ public class StoryService {
     }
 
     public StoryPublicationResponse publishStory(Integer id) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
 
         story.setPublicationState(PUBLICATION_PUBLISHED);
         story.setPublishedAt(AppClock.now());
@@ -292,7 +291,7 @@ public class StoryService {
     }
 
     public StoryPublicationResponse unpublishStory(Integer id) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
 
         story.setPublicationState(PUBLICATION_DRAFT);
         story.setPublishedAt(null);
@@ -307,7 +306,7 @@ public class StoryService {
     }
 
     public StoryArchiveResponse archiveStory(Integer id) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
 
         story.setArchivedAt(AppClock.now());
 
@@ -320,7 +319,7 @@ public class StoryService {
     }
 
     public StoryArchiveResponse restoreStory(Integer id) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
 
         story.setArchivedAt(null);
 
@@ -334,11 +333,11 @@ public class StoryService {
 
     public DuplicateStoryResponse duplicateStory(Integer id, DuplicateStoryRequest request) {
         Story source = storyRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(source);
+        StoryAccessUtils.validateReadAccess(source, appUserRepository);
 
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story duplicate = new Story();
         duplicate.setOwnerUserId(currentUser.getId());
@@ -365,68 +364,18 @@ public class StoryService {
     }
 
     public MessageResponse deleteStory(Integer id) {
-        Story story = getEditableStory(id);
+        Story story = StoryAccessUtils.getEditableStory(id, storyRepository, appUserRepository);
         storyRepository.delete(story);
         return new MessageResponse("Historia eliminada correctamente");
     }
 
-    private Story getEditableStory(Integer id) {
-        Story story = storyRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos para modificar esta historia");
-        }
-
-        return story;
-    }
-
-    private void validateReadAccess(Story story) {
-        boolean publicPublished =
-                VISIBILITY_PUBLIC.equalsIgnoreCase(story.getVisibilityState())
-                        && PUBLICATION_PUBLISHED.equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicPublished) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
     private boolean canSeePrivateStories(Integer userId) {
-        AppUser currentUser = tryGetAuthenticatedUser();
+        AppUser currentUser = AuthUtils.tryGetAuthenticatedUser(appUserRepository);
         if (currentUser == null) {
             return false;
         }
 
-        return currentUser.getId().equals(userId) || isModeratorOrAdmin(currentUser);
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
+        return currentUser.getId().equals(userId) || AuthUtils.isModeratorOrAdmin(currentUser);
     }
 
     private void validateVisibilityState(String visibilityState) {
@@ -440,26 +389,6 @@ public class StoryService {
                 && !PUBLICATION_PUBLISHED.equalsIgnoreCase(publicationState)) {
             throw new BadRequestException("publicationState inválido");
         }
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case SORT_CREATED_AT -> SORT_CREATED_AT;
-            case "updatedAt" -> "updatedAt";
-            case "title" -> "title";
-            case "publishedAt" -> "publishedAt";
-            default -> SORT_CREATED_AT;
-        };
     }
 
     private String generateUniqueSlug(String title) {

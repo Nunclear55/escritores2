@@ -13,7 +13,6 @@ import com.nunclear.escritores.enums.AccessLevel;
 import com.nunclear.escritores.enums.AccountState;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.UserChangeHistoryRepository;
 import com.nunclear.escritores.repository.UserSessionRepository;
@@ -21,8 +20,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +37,7 @@ public class AdminUserService {
 
     public AdminUserAccessLevelResponse updateAccessLevel(Integer id, UpdateUserAccessLevelRequest request) {
         AppUser targetUser = getTargetUser(id);
-        AppUser adminUser = getAuthenticatedUser();
+        AppUser adminUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         AccessLevel newAccessLevel = parseAccessLevel(request.accessLevel());
         AccessLevel oldAccessLevel = targetUser.getAccessLevel();
@@ -67,7 +66,7 @@ public class AdminUserService {
 
     public AdminUserAccountStateResponse updateAccountState(Integer id, UpdateUserAccountStateRequest request) {
         AppUser targetUser = getTargetUser(id);
-        AppUser adminUser = getAuthenticatedUser();
+        AppUser adminUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         AccountState newAccountState = parseAccountState(request.accountState());
         AccountState oldAccountState = targetUser.getAccountState();
@@ -106,7 +105,7 @@ public class AdminUserService {
             String sort
     ) {
         AccessLevel parsedAccessLevel = parseAccessLevel(accessLevel);
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? FIELD_CREATED_AT + ",desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? FIELD_CREATED_AT + ",desc" : sort, FIELD_CREATED_AT, "updatedAt", "loginName", FIELD_ACCESS_LEVEL, FIELD_ACCOUNT_STATE);
 
         Page<AppUser> result = appUserRepository.findByAccessLevelAndDeletedAtIsNull(parsedAccessLevel, pageable);
 
@@ -134,7 +133,7 @@ public class AdminUserService {
             String sort
     ) {
         AccountState parsedAccountState = parseAccountState(accountState);
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? FIELD_CREATED_AT + ",desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? FIELD_CREATED_AT + ",desc" : sort, FIELD_CREATED_AT, "updatedAt", "loginName", FIELD_ACCESS_LEVEL, FIELD_ACCOUNT_STATE);
 
         Page<AppUser> result = appUserRepository.findByAccountStateAndDeletedAtIsNull(parsedAccountState, pageable);
 
@@ -211,10 +210,6 @@ public class AdminUserService {
         return user;
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
     private AccessLevel parseAccessLevel(String accessLevel) {
         if (accessLevel == null || accessLevel.isBlank()) {
             throw new BadRequestException("accessLevel inválido");
@@ -239,24 +234,4 @@ public class AdminUserService {
         }
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case FIELD_CREATED_AT -> FIELD_CREATED_AT;
-            case "updatedAt" -> "updatedAt";
-            case "loginName" -> "loginName";
-            case FIELD_ACCESS_LEVEL -> FIELD_ACCESS_LEVEL;
-            case FIELD_ACCOUNT_STATE -> FIELD_ACCOUNT_STATE;
-            default -> FIELD_CREATED_AT;
-        };
-    }
 }

@@ -14,7 +14,7 @@ import com.nunclear.escritores.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
-
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +37,7 @@ public class ReportService {
     private final AppUserRepository appUserRepository;
 
     public ReportTargetResponse reportStory(CreateStoryReportRequest request) {
-        AppUser reporter = getAuthenticatedUser();
+        AppUser reporter = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(request.storyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Historia no encontrada"));
@@ -61,7 +61,7 @@ public class ReportService {
     }
 
     public ReportTargetResponse reportChapter(CreateChapterReportRequest request) {
-        AppUser reporter = getAuthenticatedUser();
+        AppUser reporter = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Chapter chapter = chapterRepository.findById(request.chapterId())
                 .orElseThrow(() -> new ResourceNotFoundException("Capítulo no encontrado"));
@@ -86,7 +86,7 @@ public class ReportService {
     }
 
     public ReportTargetResponse reportComment(CreateCommentReportRequest request) {
-        AppUser reporter = getAuthenticatedUser();
+        AppUser reporter = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         StoryComment comment = storyCommentRepository.findById(request.commentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Comentario no encontrado"));
@@ -113,7 +113,7 @@ public class ReportService {
     }
 
     public ReportTargetResponse reportUser(CreateUserReportRequest request) {
-        AppUser reporter = getAuthenticatedUser();
+        AppUser reporter = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         AppUser target = appUserRepository.findById(request.targetUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -137,21 +137,19 @@ public class ReportService {
     }
 
     public PageResponse<ReportListItemResponse> getPendingReports(int page, int size, String sort) {
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort
-        );
+                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "statusName");
         Page<ContentReport> result = contentReportRepository.findPendingReports(pageable);
         return mapReportPage(result);
     }
 
     public PageResponse<ReportListItemResponse> getReportsByStatus(String statusName, int page, int size, String sort) {
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort
-        );
+                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "statusName");
         Page<ContentReport> result = contentReportRepository.findByStatusNameIgnoreCase(statusName, pageable);
         return mapReportPage(result);
     }
@@ -241,11 +239,10 @@ public class ReportService {
             int size,
             String sort
     ) {
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort
-        );
+                sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "statusName");
         Page<ContentReport> result = contentReportRepository.findHistory(
                 targetUserId,
                 storyId,
@@ -275,12 +272,8 @@ public class ReportService {
         );
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
     private AppUser getAuthenticatedModeratorOrAdmin() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
@@ -288,20 +281,4 @@ public class ReportService {
         return user;
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "updatedAt" -> "updatedAt";
-            case "statusName" -> "statusName";
-            default -> "createdAt";
-        };
-    }
 }

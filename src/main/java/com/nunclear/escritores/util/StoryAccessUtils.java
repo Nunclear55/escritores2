@@ -69,6 +69,15 @@ public final class StoryAccessUtils {
     }
 
     /**
+     * Returns whether a story is publicly readable without requiring an authenticated user.
+     */
+    public static boolean isPublicReadable(Story story) {
+        return "public".equalsIgnoreCase(story.getVisibilityState())
+                && "published".equalsIgnoreCase(story.getPublicationState())
+                && story.getArchivedAt() == null;
+    }
+
+    /**
      * Determines whether the given story is readable by the current user.  Publicly
      * readable stories always return {@code true}.  Private stories return
      * {@code true} only if the current user is the owner or has a moderator/admin
@@ -79,11 +88,7 @@ public final class StoryAccessUtils {
      * @return {@code true} if the story can be read by the current user, {@code false} otherwise
      */
     public static boolean canReadStory(Story story, AppUserRepository appUserRepository) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-        if (publicReadable) {
+        if (isPublicReadable(story)) {
             return true;
         }
 

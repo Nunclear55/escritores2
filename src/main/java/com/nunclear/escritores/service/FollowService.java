@@ -8,12 +8,12 @@ import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.UserFollow;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.UserFollowRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +25,7 @@ public class FollowService {
     private final AppUserRepository appUserRepository;
 
     public FollowResponse createFollow(CreateFollowRequest request) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         AppUser followedUser = appUserRepository.findById(request.followedUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
@@ -56,7 +56,7 @@ public class FollowService {
     }
 
     public MessageResponse unfollow(Integer followedUserId) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         AppUser followedUser = appUserRepository.findById(followedUserId)
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
@@ -71,9 +71,9 @@ public class FollowService {
     }
 
     public PageResponse<FollowUserItemResponse> getMyFollowing(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "createdAt", "followerUserId", "followedUserId");
         Page<UserFollow> result = userFollowRepository.findByFollowerUserId(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -101,7 +101,7 @@ public class FollowService {
             throw new ResourceNotFoundException(USER_NOT_FOUND);
         }
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "createdAt", "followerUserId", "followedUserId");
         Page<UserFollow> result = userFollowRepository.findByFollowedUserId(userId, pageable);
 
         return new PageResponse<>(
@@ -122,7 +122,7 @@ public class FollowService {
     }
 
     public FollowCheckResponse isFollowing(Integer userId) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         boolean following = userFollowRepository.existsByFollowerUserIdAndFollowedUserId(currentUser.getId(), userId);
 
@@ -141,24 +141,4 @@ public class FollowService {
         return new FollowCountResponse(count);
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "followerUserId" -> "followerUserId";
-            case "followedUserId" -> "followedUserId";
-            default -> "createdAt";
-        };
-    }
 }

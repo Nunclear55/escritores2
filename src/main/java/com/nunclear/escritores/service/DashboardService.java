@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +39,7 @@ public class DashboardService {
     private final GlobalNoticeRepository globalNoticeRepository;
 
     public MyDashboardSummaryResponse getMySummary() {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         long storiesCount = storyRepository.countByOwnerUserId(currentUser.getId());
         long draftStoriesCount = storyRepository.countByOwnerUserIdAndPublicationStateIgnoreCaseAndArchivedAtIsNull(
@@ -58,9 +59,9 @@ public class DashboardService {
     }
 
     public PageResponse<RecentCommentDashboardItemResponse> getMyRecentComments(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, SORT_CREATED_AT, "updatedAt", "scoreValue");
         Page<StoryComment> result = storyCommentRepository.findByAuthorUserIdAndDeletedAtIsNull(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -79,9 +80,9 @@ public class DashboardService {
     }
 
     public PageResponse<MyRatingDashboardItemResponse> getMyRatings(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, SORT_CREATED_AT, "updatedAt", "scoreValue");
         Page<StoryRating> result = storyRatingRepository.findByAuthorUserId(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -100,7 +101,7 @@ public class DashboardService {
     }
 
     public AdminDashboardSummaryResponse getAdminSummary() {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!currentUser.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede ver este panel");
         }
@@ -121,7 +122,7 @@ public class DashboardService {
     }
 
     public PageResponse<SystemActivityItemResponse> getSystemActivity(int page, int size) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!currentUser.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
@@ -170,25 +171,4 @@ public class DashboardService {
         );
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "updatedAt" -> "updatedAt";
-            case "scoreValue" -> "scoreValue";
-            default -> SORT_CREATED_AT;
-        };
-    }
 }

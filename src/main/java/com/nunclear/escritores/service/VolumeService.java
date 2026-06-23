@@ -1,16 +1,13 @@
 package com.nunclear.escritores.service;
 
-import com.nunclear.escritores.util.AuthUtils;
 
 import com.nunclear.escritores.dto.request.*;
 import com.nunclear.escritores.dto.response.*;
-import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.Arc;
 import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.entity.Volume;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.ArcRepository;
 import com.nunclear.escritores.repository.StoryRepository;
@@ -22,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +29,6 @@ public class VolumeService {
     // Mala práctica corregida:
     // strings mágicos repetidos.
     // Tipo: duplicación de literales / baja mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
     private static final String SORT_POSITION_INDEX = "positionIndex";
 
     private final VolumeRepository volumeRepository;
@@ -39,7 +37,7 @@ public class VolumeService {
     private final AppUserRepository appUserRepository;
 
     public CreateVolumeResponse createVolume(CreateVolumeRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
         validateArcBelongsToStory(request.arcId(), story.getId());
 
         Volume volume = new Volume();
@@ -64,9 +62,9 @@ public class VolumeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Volumen no encontrado"));
 
         Story story = storyRepository.findById(volume.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new VolumeDetailResponse(
                 volume.getId(),
@@ -79,15 +77,14 @@ public class VolumeService {
 
     public PageResponse<VolumeListItemResponse> getVolumesByStory(Integer storyId, int page, int size, String sort) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort
-        );
+                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort, SORT_POSITION_INDEX, "title", "createdAt", "updatedAt");
 
         Page<Volume> result = volumeRepository.findByStoryId(storyId, pageable);
 
@@ -123,7 +120,7 @@ public class VolumeService {
     }
 
     public MessageResponse reorderVolumes(ReorderVolumesRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         Map<Integer, Integer> requestedPositions = request.items().stream()
                 .collect(Collectors.toMap(ReorderVolumeItemRequest::volumeId, ReorderVolumeItemRequest::positionIndex));
@@ -178,23 +175,8 @@ public class VolumeService {
         Volume volume = volumeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Volumen no encontrado"));
 
-        getEditableStory(volume.getStoryId());
+        StoryAccessUtils.getEditableStory(volume.getStoryId(), storyRepository, appUserRepository);
         return volume;
-    }
-
-    private Story getEditableStory(Integer storyId) {
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos sobre esta historia");
-        }
-
-        return story;
     }
 
     private void validateArcBelongsToStory(Integer arcId, Integer storyId) {
@@ -210,58 +192,4 @@ public class VolumeService {
         }
     }
 
-    private void validateReadAccess(Story story) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "title" -> "title";
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            case SORT_POSITION_INDEX -> SORT_POSITION_INDEX;
-            default -> SORT_POSITION_INDEX;
-        };
-    }
 }

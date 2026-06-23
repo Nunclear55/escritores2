@@ -21,9 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +45,7 @@ public class ChapterService {
     private final AppUserRepository appUserRepository;
 
     public CreateChapterResponse createChapter(CreateChapterRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         validatePublicationState(request.publicationState());
         validateVolumeBelongsToStory(request.volumeId(), story.getId());
@@ -79,7 +80,7 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Capítulo no encontrado"));
 
-        validateReadAccess(chapter);
+        StoryAccessUtils.validateReadAccess(chapter, appUserRepository);
 
         return new ChapterDetailResponse(
                 chapter.getId(),
@@ -98,11 +99,10 @@ public class ChapterService {
             int size,
             String sort
     ) {
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort
-        );
+                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort, SORT_POSITION_INDEX, SORT_TITLE, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_PUBLISHED_ON);
 
         Page<Chapter> result;
         if (includeDrafts && canSeeDrafts(storyId)) {
@@ -134,11 +134,10 @@ public class ChapterService {
             int size,
             String sort
     ) {
-        Pageable pageable = buildPageable(
+        Pageable pageable = PaginationUtils.buildPageable(
                 page,
                 size,
-                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort
-        );
+                sort == null || sort.isBlank() ? SORT_POSITION_INDEX + ",asc" : sort, SORT_POSITION_INDEX, SORT_TITLE, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_PUBLISHED_ON);
 
         Page<Chapter> result = chapterRepository.findPagePublishedByStoryId(storyId, pageable);
 
@@ -165,8 +164,8 @@ public class ChapterService {
             int size,
             String sort
     ) {
-        AppUser currentUser = getAuthenticatedUser();
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? SORT_UPDATED_AT + ",desc" : sort);
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? SORT_UPDATED_AT + ",desc" : sort, SORT_POSITION_INDEX, SORT_TITLE, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_PUBLISHED_ON);
 
         if (storyId == null) {
             List<Integer> ownStoryIds = storyRepository.findAll().stream()
@@ -182,7 +181,7 @@ public class ChapterService {
             return mapChapterPage(result);
         }
 
-        Story story = getEditableStory(storyId);
+        Story story = StoryAccessUtils.getEditableStory(storyId, storyRepository, appUserRepository);
         Page<Chapter> result = chapterRepository.findDraftsByStoryId(story.getId(), pageable);
         return mapChapterPage(result);
     }
@@ -194,7 +193,7 @@ public class ChapterService {
             int size,
             String sort
     ) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? SORT_CREATED_AT + ",desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? SORT_CREATED_AT + ",desc" : sort, SORT_POSITION_INDEX, SORT_TITLE, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_PUBLISHED_ON);
 
         Page<Chapter> result = chapterRepository.searchPublishedChapters(
                 q == null ? "" : q,
@@ -268,7 +267,7 @@ public class ChapterService {
     }
 
     public MessageResponse reorderChapters(ReorderChaptersRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         Map<Integer, Integer> requestedPositions = request.items().stream()
                 .collect(Collectors.toMap(ReorderChapterItemRequest::chapterId, ReorderChapterItemRequest::positionIndex));
@@ -341,29 +340,15 @@ public class ChapterService {
         boolean publicReadable =
                 chapter.getArchivedAt() == null
                         && PUBLICATION_STATE_PUBLISHED.equalsIgnoreCase(chapter.getPublicationState())
-                        && VISIBILITY_STATE_PUBLIC.equalsIgnoreCase(story.getVisibilityState())
-                        && PUBLICATION_STATE_PUBLISHED.equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
+                        && StoryAccessUtils.isPublicReadable(story);
 
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException("Capítulo no encontrado");
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
+        if (!publicReadable && !StoryAccessUtils.canReadStory(story, appUserRepository)) {
             throw new ResourceNotFoundException("Capítulo no encontrado");
         }
     }
 
     private boolean canSeeDrafts(Integer storyId) {
-        AppUser currentUser = tryGetAuthenticatedUser();
+        AppUser currentUser = AuthUtils.tryGetAuthenticatedUser(appUserRepository);
         if (currentUser == null) {
             return false;
         }
@@ -373,29 +358,14 @@ public class ChapterService {
             return false;
         }
 
-        return story.getOwnerUserId().equals(currentUser.getId()) || isModeratorOrAdmin(currentUser);
-    }
-
-    private Story getEditableStory(Integer storyId) {
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Historia no encontrada"));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos sobre esta historia");
-        }
-
-        return story;
+        return story.getOwnerUserId().equals(currentUser.getId()) || AuthUtils.isModeratorOrAdmin(currentUser);
     }
 
     private Chapter getEditableChapter(Integer chapterId) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Capítulo no encontrado"));
 
-        Story story = getEditableStory(chapter.getStoryId());
+        Story story = StoryAccessUtils.getEditableStory(chapter.getStoryId(), storyRepository, appUserRepository);
 
         if (!story.getId().equals(chapter.getStoryId())) {
             throw new UnauthorizedException("No tienes permisos sobre este capítulo");
@@ -420,18 +390,6 @@ public class ChapterService {
         }
     }
 
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
     private int calculateWordCount(String content) {
         if (content == null || content.isBlank()) {
             return 0;
@@ -454,24 +412,4 @@ public class ChapterService {
         return normalized.length() <= 160 ? normalized : normalized.substring(0, 160) + "...";
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case SORT_TITLE -> SORT_TITLE;
-            case SORT_CREATED_AT -> SORT_CREATED_AT;
-            case SORT_UPDATED_AT -> SORT_UPDATED_AT;
-            case SORT_POSITION_INDEX -> SORT_POSITION_INDEX;
-            case SORT_PUBLISHED_ON -> SORT_PUBLISHED_ON;
-            default -> SORT_POSITION_INDEX;
-        };
-    }
 }

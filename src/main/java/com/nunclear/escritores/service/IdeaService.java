@@ -1,21 +1,20 @@
 package com.nunclear.escritores.service;
 
-import com.nunclear.escritores.util.AuthUtils;
 
 import com.nunclear.escritores.dto.request.CreateIdeaRequest;
 import com.nunclear.escritores.dto.request.UpdateIdeaRequest;
 import com.nunclear.escritores.dto.response.*;
-import com.nunclear.escritores.entity.AppUser;
 import com.nunclear.escritores.entity.Idea;
 import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.IdeaRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +25,7 @@ public class IdeaService {
     private final AppUserRepository appUserRepository;
 
     public CreateIdeaResponse createIdea(CreateIdeaRequest request) {
-        Story story = getEditableStory(request.storyId());
+        Story story = StoryAccessUtils.getEditableStory(request.storyId(), storyRepository, appUserRepository);
 
         Idea idea = new Idea();
         idea.setStoryId(story.getId());
@@ -46,7 +45,7 @@ public class IdeaService {
         Idea idea = ideaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Idea no encontrada"));
 
-        getEditableStory(idea.getStoryId());
+        StoryAccessUtils.getEditableStory(idea.getStoryId(), storyRepository, appUserRepository);
 
         return new IdeaDetailResponse(
                 idea.getId(),
@@ -63,9 +62,9 @@ public class IdeaService {
             int size,
             String sort
     ) {
-        getEditableStory(storyId);
+        StoryAccessUtils.getEditableStory(storyId, storyRepository, appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort, "updatedAt", "createdAt", "title");
         Page<Idea> result = ideaRepository.findByStoryWithSearch(storyId, q, pageable);
 
         return new PageResponse<>(
@@ -106,47 +105,8 @@ public class IdeaService {
         Idea idea = ideaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Idea no encontrada"));
 
-        getEditableStory(idea.getStoryId());
+        StoryAccessUtils.getEditableStory(idea.getStoryId(), storyRepository, appUserRepository);
         return idea;
     }
 
-    private Story getEditableStory(Integer storyId) {
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Historia no encontrada"));
-
-        AppUser currentUser = getAuthenticatedUser();
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new UnauthorizedException("No tienes permisos sobre esta historia");
-        }
-
-        return story;
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "createdAt" -> "createdAt";
-            case "title" -> "title";
-            default -> "updatedAt";
-        };
-    }
 }

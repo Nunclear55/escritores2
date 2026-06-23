@@ -10,15 +10,14 @@ import com.nunclear.escritores.entity.*;
 import com.nunclear.escritores.enums.AccountState;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +53,7 @@ public class UserService {
     }
 
     public CurrentUserResponse getMyProfile() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         return new CurrentUserResponse(
                 user.getId(),
@@ -69,7 +68,7 @@ public class UserService {
     }
 
     public PageResponse<UserListItemResponse> listUsers(int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort, SORT_CREATED_AT, "updatedAt", "displayName", "loginName");
         Page<AppUser> result = appUserRepository.findAllActive(pageable);
 
         List<UserListItemResponse> content = result.getContent().stream()
@@ -92,7 +91,7 @@ public class UserService {
     }
 
     public PageResponse<UserSearchItemResponse> searchUsers(String q, int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "displayName,asc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "displayName,asc" : sort, SORT_CREATED_AT, "updatedAt", "displayName", "loginName");
         Page<AppUser> result = appUserRepository.searchUsers(q, pageable);
 
         List<UserSearchItemResponse> content = result.getContent().stream()
@@ -114,7 +113,7 @@ public class UserService {
     }
 
     public UpdateMyProfileResponse updateMyProfile(UpdateMyProfileRequest request) {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         user.setDisplayName(request.displayName());
         user.setBioText(request.bioText());
@@ -132,7 +131,7 @@ public class UserService {
     }
 
     public AvatarResponse changeAvatar(ChangeAvatarRequest request) {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         user.setAvatarUrl(request.avatarUrl());
         AppUser saved = appUserRepository.save(user);
 
@@ -140,7 +139,7 @@ public class UserService {
     }
 
     public MessageResponse changePassword(ChangePasswordRequest request) {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
             throw new BadRequestException("La contraseña actual no es correcta");
@@ -162,7 +161,7 @@ public class UserService {
     }
 
     public ChangeEmailResponse changeEmail(ChangeEmailRequest request) {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BadRequestException("La contraseña no es correcta");
@@ -187,7 +186,7 @@ public class UserService {
     }
 
     public MessageResponse deactivateMyAccount() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         user.setAccountState(AccountState.BANNED);
         user.setDeletedAt(AppClock.now());
@@ -228,7 +227,7 @@ public class UserService {
 
         validatePublicReadable(user);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? SORT_CREATED_AT + ",desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? SORT_CREATED_AT + ",desc" : sort, SORT_CREATED_AT, "updatedAt", "displayName", "loginName");
 
         Page<Story> result = storyRepository.findByOwnerUserIdAndVisibilityStateIgnoreCaseAndPublicationStateIgnoreCase(
                 id, "public", "published", pageable
@@ -253,10 +252,6 @@ public class UserService {
         );
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
     private void validatePublicReadable(AppUser user) {
         if (user.getDeletedAt() != null) {
             throw new ResourceNotFoundException(USER_NOT_FOUND);
@@ -267,25 +262,4 @@ public class UserService {
         }
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String safeSort = (sort == null || sort.isBlank()) ? SORT_CREATED_AT + ",desc" : sort;
-
-        String[] sortParts = safeSort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case SORT_CREATED_AT -> SORT_CREATED_AT;
-            case "updatedAt" -> "updatedAt";
-            case "displayName" -> "displayName";
-            case "loginName" -> "loginName";
-            default -> SORT_CREATED_AT;
-        };
-    }
 }

@@ -18,6 +18,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -74,7 +75,7 @@ public class CommentModerationService {
     }
 
     public PageResponse<HiddenCommentItemResponse> getHiddenComments(int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "updatedAt,desc" : sort, "updatedAt", "createdAt", "visibilityState");
         Page<StoryComment> result = storyCommentRepository.findByVisibilityStateIgnoreCaseAndDeletedAtIsNull("hidden", pageable);
 
         return new PageResponse<>(
@@ -158,20 +159,4 @@ public class CommentModerationService {
         return user;
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "createdAt" -> "createdAt";
-            case "visibilityState" -> "visibilityState";
-            default -> "updatedAt";
-        };
-    }
 }

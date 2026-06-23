@@ -9,13 +9,14 @@ import com.nunclear.escritores.entity.Story;
 import com.nunclear.escritores.entity.StoryFavorite;
 import com.nunclear.escritores.exception.BadRequestException;
 import com.nunclear.escritores.exception.ResourceNotFoundException;
-import com.nunclear.escritores.exception.UnauthorizedException;
 import com.nunclear.escritores.repository.AppUserRepository;
 import com.nunclear.escritores.repository.StoryRepository;
 import com.nunclear.escritores.repository.FavoriteStoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -24,19 +25,18 @@ public class FavoriteService {
     // Mala práctica corregida:
     // string mágico repetido.
     // Tipo: duplicación de literales / baja mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
 
     private final FavoriteStoryRepository userFavoriteStoryRepository;
     private final StoryRepository storyRepository;
     private final AppUserRepository appUserRepository;
 
     public FavoriteResponse createFavorite(CreateFavoriteRequest request) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(request.storyId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadableStory(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         if (userFavoriteStoryRepository.existsByUserIdAndStoryId(currentUser.getId(), story.getId())) {
             throw new BadRequestException("La historia ya está en favoritos");
@@ -56,10 +56,10 @@ public class FavoriteService {
     }
 
     public MessageResponse removeFavorite(Integer storyId) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
         if (!userFavoriteStoryRepository.existsByUserIdAndStoryId(currentUser.getId(), story.getId())) {
             throw new ResourceNotFoundException("La historia no está en favoritos");
@@ -70,9 +70,9 @@ public class FavoriteService {
     }
 
     public PageResponse<FavoriteListItemResponse> getMyFavorites(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "createdAt", "storyId");
         Page<StoryFavorite> result = userFavoriteStoryRepository.findByUserId(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -93,7 +93,7 @@ public class FavoriteService {
     }
 
     public FavoriteCheckResponse isFavorite(Integer storyId) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         boolean favorite = userFavoriteStoryRepository.existsByUserIdAndStoryId(currentUser.getId(), storyId);
         return new FavoriteCheckResponse(favorite);
@@ -101,62 +101,12 @@ public class FavoriteService {
 
     public FavoriteCountResponse countFavorites(Integer storyId) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadableStory(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         long count = userFavoriteStoryRepository.countByStoryId(storyId);
         return new FavoriteCountResponse(count);
     }
 
-    private void validateReadableStory(Story story) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "storyId" -> "storyId";
-            default -> "createdAt";
-        };
-    }
 }

@@ -32,13 +32,38 @@ public final class PaginationUtils {
      * @return a pageable object configured with sorting
      */
     public static Pageable buildPageable(int page, int size, String sort, UnaryOperator<String> fieldMapper) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
+        String effectiveSort = sort == null ? "" : sort;
+        String[] sortParts = effectiveSort.split(",");
+        String field = sortParts.length == 0 ? "" : sortParts[0];
         Sort.Direction direction =
                 sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC;
         String mapped = fieldMapper != null ? fieldMapper.apply(field) : field;
         return PageRequest.of(page, size, Sort.by(direction, mapped));
+    }
+
+    public static Pageable buildPageable(
+            int page,
+            int size,
+            String sort,
+            String defaultField,
+            String... allowedFields
+    ) {
+        return buildPageable(page, size, sort, field -> mapAllowedField(field, defaultField, allowedFields));
+    }
+
+    public static String mapAllowedField(String field, String defaultField, String... allowedFields) {
+        if (field == null || field.isBlank()) {
+            return defaultField;
+        }
+
+        for (String allowedField : allowedFields) {
+            if (allowedField.equals(field)) {
+                return allowedField;
+            }
+        }
+
+        return defaultField;
     }
 }

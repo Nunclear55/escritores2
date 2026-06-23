@@ -16,6 +16,8 @@ import com.nunclear.escritores.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +26,6 @@ public class RatingService {
     // Mala práctica corregida:
     // strings mágicos repetidos.
     // Tipo: duplicación de literales / baja mantenibilidad.
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
     private static final String RATING_NOT_FOUND = "Calificación no encontrada";
 
     private final StoryRatingRepository storyRatingRepository;
@@ -32,10 +33,10 @@ public class RatingService {
     private final AppUserRepository appUserRepository;
 
     public RatingResponse upsertRating(UpsertRatingRequest request) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(request.storyId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
         validateCanRate(story, currentUser);
 
@@ -64,9 +65,9 @@ public class RatingService {
                 .orElseThrow(() -> new ResourceNotFoundException(RATING_NOT_FOUND));
 
         Story story = storyRepository.findById(rating.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         return new RatingResponse(
                 rating.getId(),
@@ -79,11 +80,11 @@ public class RatingService {
 
     public PageResponse<RatingListItemResponse> getRatingsByStory(Integer storyId, int page, int size, String sort) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "createdAt", "updatedAt", "scoreValue");
         Page<StoryRating> result = storyRatingRepository.findByStoryId(storyId, pageable);
 
         return new PageResponse<>(
@@ -104,9 +105,9 @@ public class RatingService {
 
     public RatingAverageResponse getAverageByStory(Integer storyId) {
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         Double avg = storyRatingRepository.findAverageScoreByStoryId(storyId);
         long count = storyRatingRepository.countByStoryId(storyId);
@@ -117,12 +118,12 @@ public class RatingService {
     }
 
     public RatingResponse getMyRating(Integer storyId) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(story);
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
 
         StoryRating rating = storyRatingRepository.findByStoryIdAndAuthorUserId(storyId, currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException(RATING_NOT_FOUND));
@@ -140,10 +141,10 @@ public class RatingService {
         StoryRating rating = storyRatingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(RATING_NOT_FOUND));
 
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         boolean isOwner = rating.getAuthorUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
+        boolean isModeratorOrAdmin = AuthUtils.isModeratorOrAdmin(currentUser);
 
         if (!isOwner && !isModeratorOrAdmin) {
             throw new UnauthorizedException("No tienes permisos sobre esta calificación");
@@ -158,68 +159,14 @@ public class RatingService {
             throw new BadRequestException("La historia no permite calificaciones");
         }
 
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
+        boolean publicReadable = StoryAccessUtils.isPublicReadable(story);
 
         boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
+        boolean isModeratorOrAdmin = AuthUtils.isModeratorOrAdmin(currentUser);
 
         if (!publicReadable && !isOwner && !isModeratorOrAdmin) {
             throw new UnauthorizedException("No puedes calificar esta historia");
         }
     }
 
-    private void validateReadAccess(Story story) {
-        boolean publicReadable =
-                "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
-
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(STORY_NOT_FOUND);
-        }
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "updatedAt" -> "updatedAt";
-            case "scoreValue" -> "scoreValue";
-            default -> "createdAt";
-        };
-    }
 }

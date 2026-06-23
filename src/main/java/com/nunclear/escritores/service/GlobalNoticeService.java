@@ -19,6 +19,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -60,7 +61,7 @@ public class GlobalNoticeService {
                 .orElseThrow(() -> new ResourceNotFoundException(NOTICE_NOT_FOUND));
 
         if (!isPubliclyReadable(notice)) {
-            AppUser user = tryGetAuthenticatedUser();
+            AppUser user = AuthUtils.tryGetAuthenticatedUser(appUserRepository);
             if (user == null) {
                 throw new ResourceNotFoundException(NOTICE_NOT_FOUND);
             }
@@ -79,7 +80,7 @@ public class GlobalNoticeService {
     }
 
     public PageResponse<GlobalNoticeListItemResponse> getActiveNotices(int page, int size, String sort) {
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "startsAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "startsAt,desc" : sort, "startsAt", "createdAt", "updatedAt", "title");
         Page<GlobalNotice> result = globalNoticeRepository.findActiveNotices(AppClock.now(), pageable);
 
         return new PageResponse<>(
@@ -101,7 +102,7 @@ public class GlobalNoticeService {
     public PageResponse<GlobalNoticeListItemResponse> getHistory(int page, int size, String sort) {
         getAuthenticatedModeratorOrAdmin();
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "startsAt", "createdAt", "updatedAt", "title");
         Page<GlobalNotice> result = globalNoticeRepository.findByArchivedFalse(pageable);
 
         return new PageResponse<>(
@@ -197,7 +198,7 @@ public class GlobalNoticeService {
     }
 
     private AppUser getAuthenticatedAdmin() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!user.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede realizar esta acción");
         }
@@ -205,7 +206,7 @@ public class GlobalNoticeService {
     }
 
     private AppUser getAuthenticatedModeratorOrAdmin() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
@@ -213,29 +214,4 @@ public class GlobalNoticeService {
         return user;
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            case "title" -> "title";
-            default -> "startsAt";
-        };
-    }
 }

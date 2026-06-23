@@ -16,7 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import com.nunclear.escritores.util.PaginationUtils;
+import com.nunclear.escritores.util.StoryAccessUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +33,6 @@ public class CommentService {
     private static final String VISIBILITY_DELETED = "deleted";
     private static final String PUBLICATION_PUBLISHED = "published";
 
-    private static final String ROLE_MODERATOR = "MODERATOR";
-    private static final String ROLE_ADMIN = "ADMIN";
-
     private static final String SORT_UPDATED_AT = "updatedAt";
     private static final String SORT_EDITED_AT = "editedAt";
     private static final String SORT_CREATED_AT = "createdAt";
@@ -46,7 +44,7 @@ public class CommentService {
     private final AppUserRepository appUserRepository;
 
     public CreateCommentResponse createComment(CreateCommentRequest request) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         Story story = storyRepository.findById(request.storyId())
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_STORY_NOT_FOUND));
@@ -116,7 +114,7 @@ public class CommentService {
 
         validateStoryReadable(story);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_EDITED_AT);
         Page<StoryComment> result =
                 storyCommentRepository.findByStoryIdAndParentCommentIdIsNullAndDeletedAtIsNull(storyId, pageable);
 
@@ -145,7 +143,7 @@ public class CommentService {
 
         validateChapterReadable(chapter, story);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_EDITED_AT);
         Page<StoryComment> result = storyCommentRepository.findByChapterIdAndDeletedAtIsNull(chapterId, pageable);
 
         return new PageResponse<>(
@@ -170,7 +168,7 @@ public class CommentService {
 
         validateCommentReadable(parent);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,asc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,asc" : sort, SORT_CREATED_AT, SORT_UPDATED_AT, SORT_EDITED_AT);
         Page<StoryComment> result = storyCommentRepository.findByParentCommentIdAndDeletedAtIsNull(id, pageable);
 
         return new PageResponse<>(
@@ -226,7 +224,7 @@ public class CommentService {
         }
 
         boolean publicReadable = isPublicReadableStory(story);
-        AppUser currentUser = tryGetAuthenticatedUser();
+        AppUser currentUser = AuthUtils.tryGetAuthenticatedUser(appUserRepository);
 
         if (!publicReadable && currentUser == null) {
             throw new UnauthorizedException(MSG_NOT_AUTHENTICATED);
@@ -234,7 +232,7 @@ public class CommentService {
 
         if (!publicReadable && currentUser != null) {
             boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-            boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
+            boolean isModeratorOrAdmin = AuthUtils.isModeratorOrAdmin(currentUser);
 
             if (!isOwner && !isModeratorOrAdmin) {
                 throw new UnauthorizedException("No tienes permisos para comentar en esta historia");
@@ -260,21 +258,7 @@ public class CommentService {
     }
 
     private void validateStoryReadable(Story story) {
-        if (isPublicReadableStory(story)) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(MSG_STORY_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(MSG_STORY_NOT_FOUND);
-        }
+        StoryAccessUtils.validateReadAccess(story, appUserRepository);
     }
 
     private void validateChapterReadable(Chapter chapter, Story story) {
@@ -283,28 +267,16 @@ public class CommentService {
                         && PUBLICATION_PUBLISHED.equalsIgnoreCase(chapter.getPublicationState())
                         && isPublicReadableStory(story);
 
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
-            throw new ResourceNotFoundException(MSG_CHAPTER_NOT_FOUND);
-        }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
+        if (!publicReadable && !StoryAccessUtils.canReadStory(story, appUserRepository)) {
             throw new ResourceNotFoundException(MSG_CHAPTER_NOT_FOUND);
         }
     }
 
     private void validateCanEditComment(StoryComment comment) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         boolean isOwner = comment.getAuthorUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
+        boolean isModeratorOrAdmin = AuthUtils.isModeratorOrAdmin(currentUser);
 
         if (!isOwner && !isModeratorOrAdmin) {
             throw new UnauthorizedException("No tienes permisos sobre este comentario");
@@ -316,9 +288,7 @@ public class CommentService {
     }
 
     private boolean isPublicReadableStory(Story story) {
-        return VISIBILITY_PUBLIC.equalsIgnoreCase(story.getVisibilityState())
-                && PUBLICATION_PUBLISHED.equalsIgnoreCase(story.getPublicationState())
-                && story.getArchivedAt() == null;
+        return StoryAccessUtils.isPublicReadable(story);
     }
 
     private boolean isVisibleComment(StoryComment comment) {
@@ -326,33 +296,4 @@ public class CommentService {
                 && VISIBILITY_VISIBLE.equalsIgnoreCase(comment.getVisibilityState());
     }
 
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && SORT_DESC.equalsIgnoreCase(sortParts[1])
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case SORT_UPDATED_AT -> SORT_UPDATED_AT;
-            case SORT_EDITED_AT -> SORT_EDITED_AT;
-            default -> SORT_CREATED_AT;
-        };
-    }
 }

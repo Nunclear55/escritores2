@@ -17,6 +17,8 @@ import java.text.Normalizer;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import com.nunclear.escritores.util.StoryAccessUtils;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,6 @@ public class MediaService {
     // Tipo: duplicación de cadenas / baja mantenibilidad.
     private static final String FILE_NOT_FOUND = "Archivo no encontrado";
     private static final String CHAPTER_NOT_FOUND = "Capítulo no encontrado";
-    private static final String STORY_NOT_FOUND = "Historia no encontrada";
 
     private final MediaRepository mediaRepository;
     private final ChapterRepository chapterRepository;
@@ -64,9 +65,9 @@ public class MediaService {
                 .orElseThrow(() -> new ResourceNotFoundException(CHAPTER_NOT_FOUND));
 
         Story story = storyRepository.findById(chapter.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(chapter, story);
+        StoryAccessUtils.validateReadAccess(chapter, story, appUserRepository);
 
         return new MediaDetailResponse(
                 media.getId(),
@@ -89,11 +90,11 @@ public class MediaService {
                 .orElseThrow(() -> new ResourceNotFoundException(CHAPTER_NOT_FOUND));
 
         Story story = storyRepository.findById(chapter.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(chapter, story);
+        StoryAccessUtils.validateReadAccess(chapter, story, appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort, "createdAt", "updatedAt", "filename", "mediaKind");
         Page<Media> result = mediaRepository.findByChapterId(chapterId, pageable);
 
         return new PageResponse<>(
@@ -136,9 +137,9 @@ public class MediaService {
                 .orElseThrow(() -> new ResourceNotFoundException(CHAPTER_NOT_FOUND));
 
         Story story = storyRepository.findById(chapter.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        validateReadAccess(chapter, story);
+        StoryAccessUtils.validateReadAccess(chapter, story, appUserRepository);
 
         return new MediaDownloadResponse(media.getStoragePath());
     }
@@ -162,11 +163,11 @@ public class MediaService {
                 .orElseThrow(() -> new ResourceNotFoundException(CHAPTER_NOT_FOUND));
 
         Story story = storyRepository.findById(chapter.getStoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(STORY_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(StoryAccessUtils.STORY_NOT_FOUND));
 
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
         boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
+        boolean isModeratorOrAdmin = AuthUtils.isModeratorOrAdmin(currentUser);
 
         if (!isOwner && !isModeratorOrAdmin) {
             throw new UnauthorizedException("No tienes permisos sobre este capítulo");
@@ -179,55 +180,11 @@ public class MediaService {
         boolean publicReadable =
                 chapter.getArchivedAt() == null
                         && "published".equalsIgnoreCase(chapter.getPublicationState())
-                        && "public".equalsIgnoreCase(story.getVisibilityState())
-                        && "published".equalsIgnoreCase(story.getPublicationState())
-                        && story.getArchivedAt() == null;
+                        && StoryAccessUtils.isPublicReadable(story);
 
-        if (publicReadable) {
-            return;
-        }
-
-        AppUser currentUser = tryGetAuthenticatedUser();
-        if (currentUser == null) {
+        if (!publicReadable && !StoryAccessUtils.canReadStory(story, appUserRepository)) {
             throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
-
-        boolean isOwner = story.getOwnerUserId().equals(currentUser.getId());
-        boolean isModeratorOrAdmin = isModeratorOrAdmin(currentUser);
-
-        if (!isOwner && !isModeratorOrAdmin) {
-            throw new ResourceNotFoundException(FILE_NOT_FOUND);
-        }
-    }
-
-    private boolean isModeratorOrAdmin(AppUser user) {
-        return AuthUtils.isModeratorOrAdmin(user);
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
-    private AppUser tryGetAuthenticatedUser() {
-        return AuthUtils.tryGetAuthenticatedUser(appUserRepository);
-    }
-
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "updatedAt" -> "updatedAt";
-            case "filename" -> "filename";
-            case "mediaKind" -> "mediaKind";
-            default -> "createdAt";
-        };
     }
 
     private String generateStoredFilename(String originalFilename) {

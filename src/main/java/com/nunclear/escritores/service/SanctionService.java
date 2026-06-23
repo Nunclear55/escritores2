@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import com.nunclear.escritores.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -140,16 +140,16 @@ public class SanctionService {
         getAuthenticatedModeratorOrAdmin();
         getTargetUser(userId);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "sanctionKind");
         Page<UserSanction> result = userSanctionRepository.findByTargetUserId(userId, pageable);
 
         return mapPage(result);
     }
 
     public PageResponse<SanctionListItemResponse> getMySanctions(int page, int size, String sort) {
-        AppUser currentUser = getAuthenticatedUser();
+        AppUser currentUser = AuthUtils.getAuthenticatedUser(appUserRepository);
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "sanctionKind");
         Page<UserSanction> result = userSanctionRepository.findByTargetUserId(currentUser.getId(), pageable);
 
         return mapPage(result);
@@ -158,7 +158,7 @@ public class SanctionService {
     public PageResponse<SanctionListItemResponse> getActiveSanctions(int page, int size, String sort) {
         getAuthenticatedModeratorOrAdmin();
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
+        Pageable pageable = PaginationUtils.buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort, "createdAt", "updatedAt", "sanctionKind");
         Page<UserSanction> result = userSanctionRepository.findByIsActiveTrue(pageable);
 
         return mapPage(result);
@@ -194,12 +194,8 @@ public class SanctionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
-    }
-
     private AppUser getAuthenticatedModeratorOrAdmin() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
@@ -208,27 +204,11 @@ public class SanctionService {
     }
 
     private AppUser getAuthenticatedAdminOnly() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
         if (!user.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede realizar esta acción");
         }
         return user;
     }
 
-    private Pageable buildPageable(int page, int size, String sort) {
-        String[] sortParts = sort.split(",");
-        String field = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        return PageRequest.of(page, size, Sort.by(direction, mapSortField(field)));
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "updatedAt" -> "updatedAt";
-            case "sanctionKind" -> "sanctionKind";
-            default -> "createdAt";
-        };
-    }
 }

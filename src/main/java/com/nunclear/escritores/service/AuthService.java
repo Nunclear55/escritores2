@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -194,7 +193,7 @@ public class AuthService {
     }
 
     public CurrentUserResponse me() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         return new CurrentUserResponse(
                 user.getId(),
@@ -277,7 +276,7 @@ public class AuthService {
     }
 
     public MessageResponse invalidateAllSessions() {
-        AppUser user = getAuthenticatedUser();
+        AppUser user = AuthUtils.getAuthenticatedUser(appUserRepository);
 
         for (UserSession session : userSessionRepository.findByUserIdAndRevokedAtIsNull(user.getId())) {
             session.setRevokedAt(AppClock.now());
@@ -285,10 +284,6 @@ public class AuthService {
         }
 
         return new MessageResponse("Todas las sesiones fueron invalidadas");
-    }
-
-    private AppUser getAuthenticatedUser() {
-        return AuthUtils.getAuthenticatedUser(appUserRepository);
     }
 
     private String hash(String value) {
