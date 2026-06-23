@@ -72,7 +72,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -119,7 +119,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -152,7 +152,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -181,7 +181,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -281,7 +281,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(volumeRepository.findById(5)).thenReturn(Optional.of(volume));
         when(volume.getStoryId()).thenReturn(10);
@@ -320,7 +320,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -361,7 +361,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -393,7 +393,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -431,7 +431,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(volumeRepository.findById(5)).thenReturn(Optional.of(volume));
         when(volume.getStoryId()).thenReturn(10);
@@ -470,7 +470,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(volumeRepository.findById(5)).thenReturn(Optional.of(volume));
         when(volume.getStoryId()).thenReturn(10);
@@ -501,7 +501,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(volumeRepository.findById(5)).thenReturn(Optional.of(volume));
         when(volume.getStoryId()).thenReturn(10);
@@ -532,7 +532,7 @@ class VolumeServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(volumeRepository.findById(5)).thenReturn(Optional.of(volume));
         when(volume.getStoryId()).thenReturn(10);

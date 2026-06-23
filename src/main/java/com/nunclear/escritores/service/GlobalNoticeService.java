@@ -28,7 +28,6 @@ public class GlobalNoticeService {
     // strings mágicos repetidos.
     // Tipo: duplicación de literales / baja mantenibilidad.
     private static final String NOTICE_NOT_FOUND = "Comunicado no encontrado";
-    private static final String ROLE_ADMIN = "admin";
 
     private final GlobalNoticeRepository globalNoticeRepository;
     private final AppUserRepository appUserRepository;
@@ -66,8 +65,7 @@ public class GlobalNoticeService {
                 throw new ResourceNotFoundException(NOTICE_NOT_FOUND);
             }
 
-            String role = user.getAccessLevel().name();
-            if (!"moderator".equals(role) && !ROLE_ADMIN.equals(role)) {
+            if (!user.getAccessLevel().isModeratorOrAdmin()) {
                 throw new ResourceNotFoundException(NOTICE_NOT_FOUND);
             }
         }
@@ -200,7 +198,7 @@ public class GlobalNoticeService {
 
     private AppUser getAuthenticatedAdmin() {
         AppUser user = getAuthenticatedUser();
-        if (!ROLE_ADMIN.equals(user.getAccessLevel().name())) {
+        if (!user.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede realizar esta acción");
         }
         return user;
@@ -208,9 +206,7 @@ public class GlobalNoticeService {
 
     private AppUser getAuthenticatedModeratorOrAdmin() {
         AppUser user = getAuthenticatedUser();
-        String role = user.getAccessLevel().name();
-
-        if (!"moderator".equals(role) && !ROLE_ADMIN.equals(role)) {
+        if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
 

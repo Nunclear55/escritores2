@@ -494,18 +494,31 @@ public class StoryService {
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
         String withoutAccents = Pattern.compile("\\p{M}").matcher(normalized).replaceAll("");
 
-        // Mala práctica corregida:
-        // precedencia implícita en regex.
-        // Tipo: expresión regular poco clara / legibilidad y riesgo de errores.
-        String slug = withoutAccents
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("(^-+)|(-+$)", "");
+        String slug = trimHyphens(
+                withoutAccents
+                        .toLowerCase(Locale.ROOT)
+                        .replaceAll("[^a-z0-9]+", "-")
+        );
 
         if (slug.isBlank()) {
             throw new BadRequestException("No se pudo generar slug para el título");
         }
 
         return slug;
+    }
+
+    private String trimHyphens(String value) {
+        int start = 0;
+        int end = value.length();
+
+        while (start < end && value.charAt(start) == '-') {
+            start++;
+        }
+
+        while (end > start && value.charAt(end - 1) == '-') {
+            end--;
+        }
+
+        return value.substring(start, end);
     }
 }

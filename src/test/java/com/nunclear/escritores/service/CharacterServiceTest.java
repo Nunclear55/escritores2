@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,7 +66,7 @@ class CharacterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -85,7 +86,7 @@ class CharacterServiceTest {
                 "Guerrera",
                 "Magia",
                 20,
-                LocalDate.of(2005, 1, 1),
+                LocalDate.of(2005, Month.JANUARY, 1),
                 true,
                 List.of("hero", "mage"),
                 "https://img.test/alicia.jpg"
@@ -110,7 +111,7 @@ class CharacterServiceTest {
         assertEquals("Guerrera", toSave.getProfession());
         assertEquals("Magia", toSave.getAbility());
         assertEquals(20, toSave.getAge());
-        assertEquals(LocalDate.of(2005, 1, 1), toSave.getBirthDate());
+        assertEquals(LocalDate.of(2005, Month.JANUARY, 1), toSave.getBirthDate());
         assertEquals(true, toSave.getIsAlive());
         assertEquals("[\"hero\",\"mage\"]", toSave.getRolesJson());
         assertEquals("https://img.test/alicia.jpg", toSave.getImageUrl());
@@ -127,7 +128,7 @@ class CharacterServiceTest {
 
         when(appUserRepository.findById(99)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(99);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -276,7 +277,7 @@ class CharacterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyCharacterRepository.findById(5)).thenReturn(Optional.of(character));
         when(character.getStoryId()).thenReturn(10);
@@ -287,7 +288,7 @@ class CharacterServiceTest {
         when(storyCharacterRepository.save(character)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
         when(saved.getName()).thenReturn("Alicia actualizada");
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         UpdateCharacterRequest request = new UpdateCharacterRequest(
                 "Alicia actualizada",
@@ -296,7 +297,7 @@ class CharacterServiceTest {
                 "Arquera",
                 "Puntería",
                 21,
-                LocalDate.of(2004, 1, 1),
+                LocalDate.of(2004, Month.JANUARY, 1),
                 true,
                 List.of("support", "archer"),
                 "https://img.test/new.jpg"
@@ -306,7 +307,7 @@ class CharacterServiceTest {
 
         assertEquals(5, response.id());
         assertEquals("Alicia actualizada", response.name());
-        assertEquals(LocalDateTime.of(2026, 4, 22, 12, 0), response.updatedAt());
+        assertEquals(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0), response.updatedAt());
 
         verify(character).setName("Alicia actualizada");
         verify(character).setDescription("Nueva descripción");
@@ -314,7 +315,7 @@ class CharacterServiceTest {
         verify(character).setProfession("Arquera");
         verify(character).setAbility("Puntería");
         verify(character).setAge(21);
-        verify(character).setBirthDate(LocalDate.of(2004, 1, 1));
+        verify(character).setBirthDate(LocalDate.of(2004, Month.JANUARY, 1));
         verify(character).setIsAlive(true);
         verify(character).setRolesJson("[\"support\",\"archer\"]");
         verify(character).setImageUrl("https://img.test/new.jpg");
@@ -332,7 +333,7 @@ class CharacterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyCharacterRepository.findById(5)).thenReturn(Optional.of(character));
         when(character.getStoryId()).thenReturn(10);

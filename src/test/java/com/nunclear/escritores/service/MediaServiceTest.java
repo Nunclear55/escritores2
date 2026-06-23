@@ -73,7 +73,7 @@ class MediaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(mediaRepository.save(any(Media.class))).thenReturn(saved);
         when(saved.getId()).thenReturn(100);
@@ -221,7 +221,7 @@ class MediaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(mediaRepository.save(media)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
@@ -290,7 +290,7 @@ class MediaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         MessageResponse response = mediaService.deleteMedia(5);
 

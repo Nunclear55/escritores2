@@ -158,8 +158,8 @@ class AuthServiceTest {
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
         user.setDisplayName("Usuario Uno");
-        user.setAccessLevel(AccessLevel.user);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.USER);
+        user.setAccountState(AccountState.ACTIVE);
 
         when(appUserRepository.findByLoginNameIgnoreCaseOrEmailAddressIgnoreCase("usuario1", "usuario1"))
                 .thenReturn(Optional.of(user));
@@ -207,7 +207,7 @@ class AuthServiceTest {
         LoginRequest request = new LoginRequest("usuario1", "WrongPassword");
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setAccountState(AccountState.active);
+        user.setAccountState(AccountState.ACTIVE);
 
         when(appUserRepository.findByLoginNameIgnoreCaseOrEmailAddressIgnoreCase("usuario1", "usuario1"))
                 .thenReturn(Optional.of(user));
@@ -245,7 +245,7 @@ class AuthServiceTest {
         LoginRequest request = new LoginRequest("usuario1", "Password123");
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setAccountState(AccountState.suspended);
+        user.setAccountState(AccountState.SUSPENDED);
 
         when(appUserRepository.findByLoginNameIgnoreCaseOrEmailAddressIgnoreCase("usuario1", "usuario1"))
                 .thenReturn(Optional.of(user));
@@ -263,7 +263,7 @@ class AuthServiceTest {
         LoginRequest request = new LoginRequest("usuario1", "Password123");
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setAccountState(AccountState.banned);
+        user.setAccountState(AccountState.BANNED);
 
         when(appUserRepository.findByLoginNameIgnoreCaseOrEmailAddressIgnoreCase("usuario1", "usuario1"))
                 .thenReturn(Optional.of(user));
@@ -291,7 +291,7 @@ class AuthServiceTest {
         session.setExpiresAt(AppClock.now().plusMinutes(10));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setAccessLevel(AccessLevel.user);
+        user.setAccessLevel(AccessLevel.USER);
 
         when(userSessionRepository.findByRefreshTokenHashAndRevokedAtIsNull(refreshHash))
                 .thenReturn(Optional.of(session));
@@ -417,8 +417,8 @@ class AuthServiceTest {
         user.setDisplayName("Usuario Uno");
         user.setBioText("Bio");
         user.setAvatarUrl("http://avatar");
-        user.setAccessLevel(AccessLevel.user);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.USER);
+        user.setAccountState(AccountState.ACTIVE);
 
         mockAuthenticatedUser(user);
 
@@ -637,7 +637,7 @@ class AuthServiceTest {
         emailToken.setExpiresAt(AppClock.now().plusHours(24));
 
         AppUser user = buildUser(10, "usuario1", "usuario1@test.com", "hashed-pass");
-        user.setAccountState(AccountState.pending_verification);
+        user.setAccountState(AccountState.PENDING_VERIFICATION);
 
         when(emailVerificationTokenRepository.findByTokenHashAndVerifiedAtIsNull(tokenHash))
                 .thenReturn(Optional.of(emailToken));
@@ -648,7 +648,7 @@ class AuthServiceTest {
         assertEquals("Correo confirmado correctamente", response.message());
         assertNotNull(emailToken.getVerifiedAt());
         assertNotNull(user.getEmailVerifiedAt());
-        assertEquals(AccountState.active, user.getAccountState());
+        assertEquals(AccountState.ACTIVE, user.getAccountState());
         verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
         verify(appUserRepository).save(any(AppUser.class));
     }
@@ -754,8 +754,8 @@ class AuthServiceTest {
         user.setLoginName(loginName);
         user.setEmailAddress(email);
         user.setPasswordHash(passwordHash);
-        user.setAccessLevel(AccessLevel.user);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.USER);
+        user.setAccountState(AccountState.ACTIVE);
         return user;
     }
 

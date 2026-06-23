@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +24,9 @@ public class ReportService {
     // strings mágicos repetidos.
     // Tipo: duplicación de literales / baja mantenibilidad.
     private static final String STATUS_PENDING = "pending";
+    private static final String STATUS_REVIEWED = "reviewed";
+    private static final String STATUS_RESOLVED = "resolved";
+    private static final String STATUS_REJECTED = "rejected";
     private static final String REPORT_NOT_FOUND = "Reporte no encontrado";
     private static final String DEFAULT_CREATED_DESC_SORT = "createdAt,desc";
 
@@ -181,14 +183,13 @@ public class ReportService {
         AppUser reviewer = appUserRepository.findById(request.reviewedByUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Revisor no encontrado"));
 
-        String role = reviewer.getAccessLevel().name();
-        if (!"moderator".equals(role) && !"admin".equals(role)) {
+        if (!reviewer.getAccessLevel().isModeratorOrAdmin()) {
             throw new BadRequestException("El usuario asignado debe ser moderator o admin");
         }
 
         report.setReviewedByUserId(reviewer.getId());
         report.setReviewedAt(AppClock.now());
-        report.setStatusName("reviewed");
+        report.setStatusName(STATUS_REVIEWED);
 
         ContentReport saved = contentReportRepository.save(report);
 
@@ -200,46 +201,18 @@ public class ReportService {
     }
 
     public ResolvedReportResponse reviewReport(Integer id, ReviewReportRequest request) {
-        AppUser moderator = getAuthenticatedModeratorOrAdmin();
-
-        ContentReport report = contentReportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(REPORT_NOT_FOUND));
-
-        report.setReviewedByUserId(moderator.getId());
-        report.setReviewedAt(AppClock.now());
-        report.setResolutionText(request.resolutionText());
-        report.setStatusName("reviewed");
-
-        ContentReport saved = contentReportRepository.save(report);
-
-        return new ResolvedReportResponse(
-                saved.getId(),
-                saved.getStatusName(),
-                saved.getResolutionText()
-        );
+        return updateReportStatus(id, request.resolutionText(), STATUS_REVIEWED);
     }
 
     public ResolvedReportResponse resolveReport(Integer id, ResolveReportRequest request) {
-        AppUser moderator = getAuthenticatedModeratorOrAdmin();
-
-        ContentReport report = contentReportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(REPORT_NOT_FOUND));
-
-        report.setReviewedByUserId(moderator.getId());
-        report.setReviewedAt(AppClock.now());
-        report.setResolutionText(request.resolutionText());
-        report.setStatusName("resolved");
-
-        ContentReport saved = contentReportRepository.save(report);
-
-        return new ResolvedReportResponse(
-                saved.getId(),
-                saved.getStatusName(),
-                saved.getResolutionText()
-        );
+        return updateReportStatus(id, request.resolutionText(), STATUS_RESOLVED);
     }
 
     public ResolvedReportResponse rejectReport(Integer id, ResolveReportRequest request) {
+        return updateReportStatus(id, request.resolutionText(), STATUS_REJECTED);
+    }
+
+    private ResolvedReportResponse updateReportStatus(Integer id, String resolutionText, String statusName) {
         AppUser moderator = getAuthenticatedModeratorOrAdmin();
 
         ContentReport report = contentReportRepository.findById(id)
@@ -247,8 +220,8 @@ public class ReportService {
 
         report.setReviewedByUserId(moderator.getId());
         report.setReviewedAt(AppClock.now());
-        report.setResolutionText(request.resolutionText());
-        report.setStatusName("resolved");
+        report.setResolutionText(resolutionText);
+        report.setStatusName(statusName);
 
         ContentReport saved = contentReportRepository.save(report);
 
@@ -308,9 +281,7 @@ public class ReportService {
 
     private AppUser getAuthenticatedModeratorOrAdmin() {
         AppUser user = getAuthenticatedUser();
-        String role = user.getAccessLevel().name();
-
-        if (!"moderator".equals(role) && !"admin".equals(role)) {
+        if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
 

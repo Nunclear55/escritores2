@@ -15,6 +15,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -46,7 +47,7 @@ class UserControllerTest {
     void getUserById_deberiaResponder200() throws Exception {
         UserProfileResponse response = new UserProfileResponse(
                 1, "juan", "Juan", "Bio", "https://img.test/a.jpg", "user",
-                LocalDateTime.of(2026, 4, 22, 10, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 10, 0)
         );
 
         when(userService.getUserById(1)).thenReturn(response);
@@ -107,7 +108,7 @@ class UserControllerTest {
         UpdateMyProfileRequest request = new UpdateMyProfileRequest("Juan Nuevo", "Bio nueva", "https://img.test/b.jpg");
         UpdateMyProfileResponse response = new UpdateMyProfileResponse(
                 1, "Juan Nuevo", "Bio nueva", "https://img.test/b.jpg",
-                LocalDateTime.of(2026, 4, 22, 12, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 12, 0)
         );
 
         when(userService.updateMyProfile(eq(request))).thenReturn(response);
@@ -124,7 +125,7 @@ class UserControllerTest {
     void changeAvatar_deberiaResponder200() throws Exception {
         ChangeAvatarRequest request = new ChangeAvatarRequest("https://img.test/new.jpg");
         AvatarResponse response = new AvatarResponse("https://img.test/new.jpg",
-                LocalDateTime.of(2026, 4, 22, 12, 0));
+                LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         when(userService.changeAvatar(eq(request))).thenReturn(response);
 

@@ -69,7 +69,7 @@ class CharacterSkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(characterSkillRepository.existsByStoryCharacterIdAndSkillId(11, 22)).thenReturn(false);
         when(characterSkillRepository.save(any(CharacterSkill.class))).thenReturn(saved);
@@ -130,7 +130,7 @@ class CharacterSkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(characterSkillRepository.existsByStoryCharacterIdAndSkillId(11, 22)).thenReturn(true);
 
@@ -230,7 +230,7 @@ class CharacterSkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(characterSkillRepository.save(rel)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
@@ -270,7 +270,7 @@ class CharacterSkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         MessageResponse response = characterSkillService.deleteRelation(5);
 

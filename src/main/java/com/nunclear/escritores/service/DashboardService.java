@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +23,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
+
+    private static final String SORT_CREATED_AT = "createdAt";
+    private static final String DEFAULT_CREATED_DESC_SORT = SORT_CREATED_AT + ",desc";
 
     private final AppUserRepository appUserRepository;
     private final StoryRepository storyRepository;
@@ -58,7 +60,7 @@ public class DashboardService {
     public PageResponse<RecentCommentDashboardItemResponse> getMyRecentComments(int page, int size, String sort) {
         AppUser currentUser = getAuthenticatedUser();
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
         Page<StoryComment> result = storyCommentRepository.findByAuthorUserIdAndDeletedAtIsNull(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -79,7 +81,7 @@ public class DashboardService {
     public PageResponse<MyRatingDashboardItemResponse> getMyRatings(int page, int size, String sort) {
         AppUser currentUser = getAuthenticatedUser();
 
-        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? "createdAt,desc" : sort);
+        Pageable pageable = buildPageable(page, size, sort == null || sort.isBlank() ? DEFAULT_CREATED_DESC_SORT : sort);
         Page<StoryRating> result = storyRatingRepository.findByAuthorUserId(currentUser.getId(), pageable);
 
         return new PageResponse<>(
@@ -99,7 +101,7 @@ public class DashboardService {
 
     public AdminDashboardSummaryResponse getAdminSummary() {
         AppUser currentUser = getAuthenticatedUser();
-        if (!"admin".equals(currentUser.getAccessLevel().name())) {
+        if (!currentUser.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede ver este panel");
         }
 
@@ -120,18 +122,17 @@ public class DashboardService {
 
     public PageResponse<SystemActivityItemResponse> getSystemActivity(int page, int size) {
         AppUser currentUser = getAuthenticatedUser();
-        String role = currentUser.getAccessLevel().name();
-        if (!"moderator".equals(role) && !"admin".equals(role)) {
+        if (!currentUser.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
 
         int fetchSize = Math.max(size, 20);
 
         Page<ContentReport> reports = contentReportRepository.findAll(
-                PageRequest.of(0, fetchSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+                PageRequest.of(0, fetchSize, Sort.by(Sort.Direction.DESC, SORT_CREATED_AT))
         );
         Page<GlobalNotice> notices = globalNoticeRepository.findAll(
-                PageRequest.of(0, fetchSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+                PageRequest.of(0, fetchSize, Sort.by(Sort.Direction.DESC, SORT_CREATED_AT))
         );
 
         List<SystemActivityItemResponse> items = new ArrayList<>();
@@ -187,7 +188,7 @@ public class DashboardService {
         return switch (field) {
             case "updatedAt" -> "updatedAt";
             case "scoreValue" -> "scoreValue";
-            default -> "createdAt";
+            default -> SORT_CREATED_AT;
         };
     }
 }

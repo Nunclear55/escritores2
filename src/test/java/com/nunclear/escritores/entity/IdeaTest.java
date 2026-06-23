@@ -3,6 +3,7 @@ package com.nunclear.escritores.entity;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,8 +21,8 @@ class IdeaTest {
     @Test
     void preUpdate_deberiaActualizarUpdatedAt() {
         Idea idea = new Idea();
-        idea.setUpdatedAt(LocalDateTime.of(2026, 4, 22, 10, 0));
+        idea.setUpdatedAt(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0));
         idea.preUpdate();
-        assertTrue(idea.getUpdatedAt().isAfter(LocalDateTime.of(2026, 4, 22, 10, 0)));
+        assertTrue(idea.getUpdatedAt().isAfter(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0)));
     }
 }

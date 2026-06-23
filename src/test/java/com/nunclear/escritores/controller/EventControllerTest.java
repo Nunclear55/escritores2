@@ -14,6 +14,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,7 +45,7 @@ class EventControllerTest {
     @WithMockUser(roles = "USER")
     void createEvent_deberiaResponder200() throws Exception {
         CreateEventRequest request = new CreateEventRequest(
-                10, 3, "Batalla", "Desc", LocalDate.of(2026, 1, 1), 5,
+                10, 3, "Batalla", "Desc", LocalDate.of(2026, Month.JANUARY, 1), 5,
                 "combat", List.of("war"), List.of(11)
         );
         CreateEventResponse response = new CreateEventResponse(1, 10, 3, "Batalla");
@@ -120,7 +121,7 @@ class EventControllerTest {
     @WithMockUser(roles = "USER")
     void updateEvent_deberiaResponder200() throws Exception {
         UpdateEventRequest request = new UpdateEventRequest(
-                "Batalla final", "Desc", LocalDate.of(2026, 1, 2), 9,
+                "Batalla final", "Desc", LocalDate.of(2026, Month.JANUARY, 2), 9,
                 "combat", List.of("final"), List.of(11)
         );
         UpdateEventResponse response = new UpdateEventResponse(1, "Batalla final");

@@ -53,14 +53,14 @@ public class AdminUserService {
         saveHistory(
                 saved.getId(),
                 FIELD_ACCESS_LEVEL,
-                oldAccessLevel.name(),
-                newAccessLevel.name(),
+                oldAccessLevel.getValue(),
+                newAccessLevel.getValue(),
                 adminUser.getId()
         );
 
         return new AdminUserAccessLevelResponse(
                 saved.getId(),
-                saved.getAccessLevel().name(),
+                saved.getAccessLevel().getValue(),
                 saved.getUpdatedAt()
         );
     }
@@ -78,7 +78,7 @@ public class AdminUserService {
 
         targetUser.setAccountState(newAccountState);
 
-        if (newAccountState == AccountState.banned) {
+        if (newAccountState == AccountState.BANNED) {
             revokeAllSessions(targetUser.getId());
         }
 
@@ -87,14 +87,14 @@ public class AdminUserService {
         saveHistory(
                 saved.getId(),
                 FIELD_ACCOUNT_STATE,
-                oldAccountState.name(),
-                newAccountState.name(),
+                oldAccountState.getValue(),
+                newAccountState.getValue(),
                 adminUser.getId()
         );
 
         return new AdminUserAccountStateResponse(
                 saved.getId(),
-                saved.getAccountState().name(),
+                saved.getAccountState().getValue(),
                 saved.getUpdatedAt()
         );
     }
@@ -114,7 +114,7 @@ public class AdminUserService {
                 .map(user -> new AdminUserByRoleItemResponse(
                         user.getId(),
                         user.getLoginName(),
-                        user.getAccessLevel().name()
+                        user.getAccessLevel().getValue()
                 ))
                 .toList();
 
@@ -142,7 +142,7 @@ public class AdminUserService {
                 .map(user -> new AdminUserByStateItemResponse(
                         user.getId(),
                         user.getLoginName(),
-                        user.getAccountState().name()
+                        user.getAccountState().getValue()
                 ))
                 .toList();
 
@@ -221,7 +221,7 @@ public class AdminUserService {
         }
 
         try {
-            return AccessLevel.valueOf(accessLevel.trim().toLowerCase());
+            return AccessLevel.fromValue(accessLevel);
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("accessLevel inválido");
         }
@@ -233,7 +233,7 @@ public class AdminUserService {
         }
 
         try {
-            return AccountState.valueOf(accountState.trim().toLowerCase());
+            return AccountState.fromValue(accountState);
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("accountState inválido");
         }

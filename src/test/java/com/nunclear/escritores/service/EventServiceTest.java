@@ -20,6 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,7 +63,7 @@ class EventServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(3)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -78,7 +79,7 @@ class EventServiceTest {
 
         CreateEventResponse response = eventService.createEvent(
                 new CreateEventRequest(
-                        10, 3, "Batalla", "Desc", LocalDate.of(2026, 1, 1), 5,
+                        10, 3, "Batalla", "Desc", LocalDate.of(2026, Month.JANUARY, 1), 5,
                         "combat", List.of("war"), List.of(11)
                 )
         );
@@ -105,7 +106,7 @@ class EventServiceTest {
         when(story.getOwnerUserId()).thenReturn(1);
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(3)).thenReturn(Optional.empty());
 
@@ -254,7 +255,7 @@ class EventServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyCharacterRepository.findById(11)).thenReturn(Optional.of(character));
         when(character.getStoryId()).thenReturn(10);
@@ -266,7 +267,7 @@ class EventServiceTest {
         UpdateEventResponse response = eventService.updateEvent(
                 5,
                 new UpdateEventRequest(
-                        "Batalla final", "Desc", LocalDate.of(2026, 1, 2), 9,
+                        "Batalla final", "Desc", LocalDate.of(2026, Month.JANUARY, 2), 9,
                         "combat", List.of("final"), List.of(11)
                 )
         );
@@ -300,7 +301,7 @@ class EventServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         MessageResponse response = eventService.deleteEvent(5);
 

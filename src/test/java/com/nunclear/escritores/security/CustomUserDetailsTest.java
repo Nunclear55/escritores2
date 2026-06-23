@@ -18,8 +18,8 @@ class CustomUserDetailsTest {
         user.setId(1);
         user.setLoginName("juan");
         user.setPasswordHash("hash");
-        user.setAccessLevel(AccessLevel.admin);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.ADMIN);
+        user.setAccountState(AccountState.ACTIVE);
 
         CustomUserDetails details = new CustomUserDetails(user);
 
@@ -36,8 +36,8 @@ class CustomUserDetailsTest {
         user.setId(1);
         user.setLoginName("juan");
         user.setPasswordHash("hash");
-        user.setAccessLevel(AccessLevel.moderator);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.MODERATOR);
+        user.setAccountState(AccountState.ACTIVE);
 
         CustomUserDetails details = new CustomUserDetails(user);
         Collection<SimpleGrantedAuthority> authorities =
@@ -49,37 +49,37 @@ class CustomUserDetailsTest {
 
     @Test
     void isAccountNonExpired_deberiaRetornarTrue() {
-        CustomUserDetails details = buildDetails(AccountState.active);
+        CustomUserDetails details = buildDetails(AccountState.ACTIVE);
         assertTrue(details.isAccountNonExpired());
     }
 
     @Test
     void isCredentialsNonExpired_deberiaRetornarTrue() {
-        CustomUserDetails details = buildDetails(AccountState.active);
+        CustomUserDetails details = buildDetails(AccountState.ACTIVE);
         assertTrue(details.isCredentialsNonExpired());
     }
 
     @Test
     void isAccountNonLocked_deberiaRetornarTrue_siEstadoActivo() {
-        CustomUserDetails details = buildDetails(AccountState.active);
+        CustomUserDetails details = buildDetails(AccountState.ACTIVE);
         assertTrue(details.isAccountNonLocked());
     }
 
     @Test
     void isAccountNonLocked_deberiaRetornarFalse_siEstadoBanned() {
-        CustomUserDetails details = buildDetails(AccountState.banned);
+        CustomUserDetails details = buildDetails(AccountState.BANNED);
         assertFalse(details.isAccountNonLocked());
     }
 
     @Test
     void isEnabled_deberiaRetornarTrue_siNoEstaBanned() {
-        CustomUserDetails details = buildDetails(AccountState.active);
+        CustomUserDetails details = buildDetails(AccountState.ACTIVE);
         assertTrue(details.isEnabled());
     }
 
     @Test
     void isEnabled_deberiaRetornarFalse_siEstaBanned() {
-        CustomUserDetails details = buildDetails(AccountState.banned);
+        CustomUserDetails details = buildDetails(AccountState.BANNED);
         assertFalse(details.isEnabled());
     }
 
@@ -88,7 +88,7 @@ class CustomUserDetailsTest {
         user.setId(1);
         user.setLoginName("juan");
         user.setPasswordHash("hash");
-        user.setAccessLevel(AccessLevel.user);
+        user.setAccessLevel(AccessLevel.USER);
         user.setAccountState(state);
         return new CustomUserDetails(user);
     }

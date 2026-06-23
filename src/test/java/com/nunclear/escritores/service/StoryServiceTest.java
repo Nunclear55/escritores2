@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,7 +74,7 @@ class StoryServiceTest {
         when(saved.getSlugText()).thenReturn("mi-historia");
         when(saved.getVisibilityState()).thenReturn("public");
         when(saved.getPublicationState()).thenReturn("draft");
-        when(saved.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 10, 0));
+        when(saved.getCreatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0));
 
         CreateStoryRequest request = new CreateStoryRequest(
                 "Mi Historia",
@@ -83,7 +84,7 @@ class StoryServiceTest {
                 "draft",
                 true,
                 true,
-                LocalDate.of(2026, 1, 1)
+                LocalDate.of(2026, Month.JANUARY, 1)
         );
 
         CreateStoryResponse response = storyService.createStory(request);
@@ -483,7 +484,7 @@ class StoryServiceTest {
 
         when(story.getId()).thenReturn(1);
         when(story.getTitle()).thenReturn("Archivada");
-        when(story.getArchivedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(story.getArchivedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         PageResponse<ArchivedStoryItemResponse> response = storyService.getMyArchived(0, 20, null);
 
@@ -503,7 +504,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -514,7 +515,7 @@ class StoryServiceTest {
 
         when(saved.getId()).thenReturn(10);
         when(saved.getTitle()).thenReturn("Nuevo Título");
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 13, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 13, 0));
 
         UpdateStoryRequest request = new UpdateStoryRequest(
                 "Nuevo Título",
@@ -550,7 +551,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(99)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(99);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -584,7 +585,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -592,7 +593,7 @@ class StoryServiceTest {
         when(storyRepository.save(story)).thenReturn(saved);
         when(saved.getId()).thenReturn(10);
         when(saved.getPublicationState()).thenReturn("published");
-        when(saved.getPublishedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 14, 0));
+        when(saved.getPublishedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 14, 0));
 
         StoryPublicationResponse response = storyService.publishStory(10);
 
@@ -614,7 +615,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -644,14 +645,14 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
 
         when(storyRepository.save(story)).thenReturn(saved);
         when(saved.getId()).thenReturn(10);
-        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 15, 0));
+        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 15, 0));
 
         StoryArchiveResponse response = storyService.archiveStory(10);
 
@@ -672,7 +673,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -709,7 +710,7 @@ class StoryServiceTest {
         when(source.getCoverImageUrl()).thenReturn("https://img.com/old.jpg");
         when(source.getAllowFeedback()).thenReturn(true);
         when(source.getAllowScores()).thenReturn(false);
-        when(source.getStartedOn()).thenReturn(LocalDate.of(2025, 1, 1));
+        when(source.getStartedOn()).thenReturn(LocalDate.of(2025, Month.JANUARY, 1));
         when(source.getId()).thenReturn(10);
 
         when(storyRepository.existsBySlugText("copia-de-historia")).thenReturn(false);
@@ -751,7 +752,7 @@ class StoryServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -1331,7 +1332,7 @@ class StoryServiceTest {
         mockAuthenticatedUser(principal);
         when(appUserRepository.findById(99)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(99);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);

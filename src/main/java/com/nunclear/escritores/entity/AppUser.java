@@ -1,6 +1,8 @@
 package com.nunclear.escritores.entity;
 
 
+import com.nunclear.escritores.converter.AccessLevelConverter;
+import com.nunclear.escritores.converter.AccountStateConverter;
 import com.nunclear.escritores.enums.AccessLevel;
 import com.nunclear.escritores.enums.AccountState;
 import jakarta.persistence.*;
@@ -34,13 +36,13 @@ public class AppUser extends Auditable {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = AccessLevelConverter.class)
     @Column(name = "access_level", nullable = false, length = 30)
-    private AccessLevel accessLevel = AccessLevel.user;
+    private AccessLevel accessLevel = AccessLevel.USER;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = AccountStateConverter.class)
     @Column(name = "account_state", nullable = false, length = 30)
-    private AccountState accountState = AccountState.pending_verification;
+    private AccountState accountState = AccountState.PENDING_VERIFICATION;
 
     @Column(name = "display_name", length = 150)
     private String displayName;

@@ -32,6 +32,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,14 +68,14 @@ class UserServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
         when(user.getId()).thenReturn(1);
         when(user.getLoginName()).thenReturn("juan");
         when(user.getDisplayName()).thenReturn("Juan");
         when(user.getBioText()).thenReturn("Bio");
         when(user.getAvatarUrl()).thenReturn("https://img.test/a.jpg");
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
-        when(user.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 10, 0));
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
+        when(user.getCreatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0));
 
         UserProfileResponse response = userService.getUserById(1);
 
@@ -105,7 +106,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.banned);
+        when(user.getAccountState()).thenReturn(AccountState.BANNED);
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -130,8 +131,8 @@ class UserServiceTest {
         when(user.getDisplayName()).thenReturn("Juan");
         when(user.getBioText()).thenReturn("Bio");
         when(user.getAvatarUrl()).thenReturn("https://img.test/a.jpg");
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         CurrentUserResponse response = userService.getMyProfile();
 
@@ -149,8 +150,8 @@ class UserServiceTest {
         when(user.getId()).thenReturn(1);
         when(user.getLoginName()).thenReturn("juan");
         when(user.getDisplayName()).thenReturn("Juan");
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         PageResponse<UserListItemResponse> response = userService.listUsers(0, 20, "createdAt,desc");
 
@@ -190,7 +191,7 @@ class UserServiceTest {
         when(saved.getDisplayName()).thenReturn("Juan Actualizado");
         when(saved.getBioText()).thenReturn("Nueva bio");
         when(saved.getAvatarUrl()).thenReturn("https://img.test/new.jpg");
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         UpdateMyProfileResponse response = userService.updateMyProfile(
                 new UpdateMyProfileRequest("Juan Actualizado", "Nueva bio", "https://img.test/new.jpg")
@@ -216,7 +217,7 @@ class UserServiceTest {
 
         when(appUserRepository.save(user)).thenReturn(saved);
         when(saved.getAvatarUrl()).thenReturn("https://img.test/new.jpg");
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         AvatarResponse response = userService.changeAvatar(
                 new ChangeAvatarRequest("https://img.test/new.jpg")
@@ -358,7 +359,7 @@ class UserServiceTest {
         MessageResponse response = userService.deactivateMyAccount();
 
         assertEquals("Cuenta desactivada correctamente", response.message());
-        verify(user).setAccountState(AccountState.banned);
+        verify(user).setAccountState(AccountState.BANNED);
         verify(user).setDeletedAt(any(LocalDateTime.class));
         verify(appUserRepository).save(user);
         verify(session).setRevokedAt(any(LocalDateTime.class));
@@ -371,7 +372,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
         when(user.getId()).thenReturn(2);
         when(user.getDisplayName()).thenReturn("Ana");
         when(user.getBioText()).thenReturn("Bio");
@@ -398,7 +399,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         when(storyRepository.findByOwnerUserIdAndVisibilityStateIgnoreCaseAndPublicationStateIgnoreCase(
                 eq(2), eq("public"), eq("published"), any(Pageable.class)
@@ -438,7 +439,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.suspended);
+        when(user.getAccountState()).thenReturn(AccountState.SUSPENDED);
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -499,14 +500,14 @@ class UserServiceTest {
         when(user1.getId()).thenReturn(1);
         when(user1.getLoginName()).thenReturn("alice");
         when(user1.getDisplayName()).thenReturn("Alice");
-        when(user1.getAccessLevel()).thenReturn(AccessLevel.user);
-        when(user1.getAccountState()).thenReturn(AccountState.active);
+        when(user1.getAccessLevel()).thenReturn(AccessLevel.USER);
+        when(user1.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         when(user2.getId()).thenReturn(2);
         when(user2.getLoginName()).thenReturn("bob");
         when(user2.getDisplayName()).thenReturn("Bob");
-        when(user2.getAccessLevel()).thenReturn(AccessLevel.user);
-        when(user2.getAccountState()).thenReturn(AccountState.active);
+        when(user2.getAccessLevel()).thenReturn(AccessLevel.USER);
+        when(user2.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         PageResponse<UserListItemResponse> response = userService.listUsers(0, 20, "loginName,asc");
 
@@ -599,7 +600,7 @@ class UserServiceTest {
         when(saved.getDisplayName()).thenReturn("Name");
         when(saved.getBioText()).thenReturn(null);
         when(saved.getAvatarUrl()).thenReturn(null);
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         UpdateMyProfileResponse response = userService.updateMyProfile(
                 new UpdateMyProfileRequest("Name", null, null)
@@ -813,7 +814,7 @@ class UserServiceTest {
         MessageResponse response = userService.deactivateMyAccount();
 
         assertEquals("Cuenta desactivada correctamente", response.message());
-        verify(user).setAccountState(AccountState.banned);
+        verify(user).setAccountState(AccountState.BANNED);
         verify(user).setDeletedAt(any(LocalDateTime.class));
         verify(appUserRepository).save(user);
         verify(userSessionRepository, never()).save(any(UserSession.class));
@@ -840,7 +841,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.banned);
+        when(user.getAccountState()).thenReturn(AccountState.BANNED);
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -895,7 +896,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.banned);
+        when(user.getAccountState()).thenReturn(AccountState.BANNED);
 
         ResourceNotFoundException ex = assertThrows(
                 ResourceNotFoundException.class,
@@ -912,7 +913,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         when(storyRepository.findByOwnerUserIdAndVisibilityStateIgnoreCaseAndPublicationStateIgnoreCase(
                 eq(2), eq("public"), eq("published"), any(Pageable.class)
@@ -932,7 +933,7 @@ class UserServiceTest {
 
         when(appUserRepository.findById(2)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(null);
-        when(user.getAccountState()).thenReturn(AccountState.active);
+        when(user.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         when(storyRepository.findByOwnerUserIdAndVisibilityStateIgnoreCaseAndPublicationStateIgnoreCase(
                 eq(2), eq("public"), eq("published"), any(Pageable.class)

@@ -25,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,13 +66,13 @@ class AdminUserServiceTest {
         when(appUserRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
 
         when(targetUser.getDeletedAt()).thenReturn(null);
-        when(targetUser.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(targetUser.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(adminUser.getId()).thenReturn(adminId);
 
         when(savedUser.getId()).thenReturn(targetUserId);
-        when(savedUser.getAccessLevel()).thenReturn(AccessLevel.admin);
-        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 10, 0));
+        when(savedUser.getAccessLevel()).thenReturn(AccessLevel.ADMIN);
+        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0));
 
         when(appUserRepository.save(targetUser)).thenReturn(savedUser);
 
@@ -89,9 +90,9 @@ class AdminUserServiceTest {
         assertNotNull(response);
         assertEquals(targetUserId, response.id());
         assertEquals("admin", response.accessLevel());
-        assertEquals(LocalDateTime.of(2026, 4, 22, 10, 0), response.updatedAt());
+        assertEquals(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0), response.updatedAt());
 
-        verify(targetUser).setAccessLevel(AccessLevel.admin);
+        verify(targetUser).setAccessLevel(AccessLevel.ADMIN);
         verify(appUserRepository).save(targetUser);
 
         ArgumentCaptor<UserChangeHistory> historyCaptor = ArgumentCaptor.forClass(UserChangeHistory.class);
@@ -118,7 +119,7 @@ class AdminUserServiceTest {
         when(appUserRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
 
         when(targetUser.getDeletedAt()).thenReturn(null);
-        when(targetUser.getAccessLevel()).thenReturn(AccessLevel.admin);
+        when(targetUser.getAccessLevel()).thenReturn(AccessLevel.ADMIN);
 
         CustomUserDetails principal = mock(CustomUserDetails.class);
         when(principal.getId()).thenReturn(adminId);
@@ -186,7 +187,7 @@ class AdminUserServiceTest {
         when(appUserRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
 
         when(targetUser.getDeletedAt()).thenReturn(null);
-        when(targetUser.getAccountState()).thenReturn(AccountState.active);
+        when(targetUser.getAccountState()).thenReturn(AccountState.ACTIVE);
         when(targetUser.getId()).thenReturn(targetUserId);
 
         when(adminUser.getId()).thenReturn(adminId);
@@ -199,8 +200,8 @@ class AdminUserServiceTest {
 
         when(appUserRepository.save(targetUser)).thenReturn(savedUser);
         when(savedUser.getId()).thenReturn(targetUserId);
-        when(savedUser.getAccountState()).thenReturn(AccountState.banned);
-        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 11, 0));
+        when(savedUser.getAccountState()).thenReturn(AccountState.BANNED);
+        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 11, 0));
 
         CustomUserDetails principal = mock(CustomUserDetails.class);
         when(principal.getId()).thenReturn(adminId);
@@ -216,9 +217,9 @@ class AdminUserServiceTest {
         assertNotNull(response);
         assertEquals(targetUserId, response.id());
         assertEquals("banned", response.accountState());
-        assertEquals(LocalDateTime.of(2026, 4, 22, 11, 0), response.updatedAt());
+        assertEquals(LocalDateTime.of(2026, Month.APRIL, 22, 11, 0), response.updatedAt());
 
-        verify(targetUser).setAccountState(AccountState.banned);
+        verify(targetUser).setAccountState(AccountState.BANNED);
         verify(userSessionRepository).findByUserIdAndRevokedAtIsNull(targetUserId);
         verify(userSessionRepository, times(2)).save(any());
 
@@ -245,13 +246,13 @@ class AdminUserServiceTest {
         when(appUserRepository.findById(adminId)).thenReturn(Optional.of(adminUser));
 
         when(targetUser.getDeletedAt()).thenReturn(null);
-        when(targetUser.getAccountState()).thenReturn(AccountState.pending_verification);
+        when(targetUser.getAccountState()).thenReturn(AccountState.PENDING_VERIFICATION);
 
         when(adminUser.getId()).thenReturn(adminId);
 
         when(savedUser.getId()).thenReturn(targetUserId);
-        when(savedUser.getAccountState()).thenReturn(AccountState.active);
-        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(savedUser.getAccountState()).thenReturn(AccountState.ACTIVE);
+        when(savedUser.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         when(appUserRepository.save(targetUser)).thenReturn(savedUser);
 
@@ -312,14 +313,14 @@ class AdminUserServiceTest {
         event1.setChangedField("accessLevel");
         event1.setOldValue("user");
         event1.setNewValue("admin");
-        event1.setChangedAt(LocalDateTime.of(2026, 4, 22, 9, 0));
+        event1.setChangedAt(LocalDateTime.of(2026, Month.APRIL, 22, 9, 0));
         event1.setChangedByUserId(99);
 
         UserChangeHistory event2 = new UserChangeHistory();
         event2.setChangedField("accountState");
         event2.setOldValue("active");
         event2.setNewValue("banned");
-        event2.setChangedAt(LocalDateTime.of(2026, 4, 22, 8, 0));
+        event2.setChangedAt(LocalDateTime.of(2026, Month.APRIL, 22, 8, 0));
         event2.setChangedByUserId(99);
 
         Page<UserChangeHistory> page = new PageImpl<>(List.of(event1, event2));
@@ -346,11 +347,11 @@ class AdminUserServiceTest {
 
         when(user1.getId()).thenReturn(1);
         when(user1.getLoginName()).thenReturn("juan");
-        when(user1.getAccessLevel()).thenReturn(AccessLevel.admin);
+        when(user1.getAccessLevel()).thenReturn(AccessLevel.ADMIN);
 
         when(user2.getId()).thenReturn(2);
         when(user2.getLoginName()).thenReturn("ana");
-        when(user2.getAccessLevel()).thenReturn(AccessLevel.admin);
+        when(user2.getAccessLevel()).thenReturn(AccessLevel.ADMIN);
 
         Page<AppUser> page = new PageImpl<>(
                 List.of(user1, user2),
@@ -358,7 +359,7 @@ class AdminUserServiceTest {
                 2
         );
 
-        when(appUserRepository.findByAccessLevelAndDeletedAtIsNull(eq(AccessLevel.admin), any(Pageable.class)))
+        when(appUserRepository.findByAccessLevelAndDeletedAtIsNull(eq(AccessLevel.ADMIN), any(Pageable.class)))
                 .thenReturn(page);
 
         PageResponse<AdminUserByRoleItemResponse> response =
@@ -381,7 +382,7 @@ class AdminUserServiceTest {
 
         when(user1.getId()).thenReturn(1);
         when(user1.getLoginName()).thenReturn("pedro");
-        when(user1.getAccountState()).thenReturn(AccountState.active);
+        when(user1.getAccountState()).thenReturn(AccountState.ACTIVE);
 
         Page<AppUser> page = new PageImpl<>(
                 List.of(user1),
@@ -389,7 +390,7 @@ class AdminUserServiceTest {
                 1
         );
 
-        when(appUserRepository.findByAccountStateAndDeletedAtIsNull(eq(AccountState.active), any(Pageable.class)))
+        when(appUserRepository.findByAccountStateAndDeletedAtIsNull(eq(AccountState.ACTIVE), any(Pageable.class)))
                 .thenReturn(page);
 
         PageResponse<AdminUserByStateItemResponse> response =

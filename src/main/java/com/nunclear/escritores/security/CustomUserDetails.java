@@ -21,8 +21,8 @@ public class CustomUserDetails implements UserDetails {
         this.id = user.getId();
         this.username = user.getLoginName();
         this.password = user.getPasswordHash();
-        this.accessLevel = user.getAccessLevel().name();
-        this.accountState = user.getAccountState().name();
+        this.accessLevel = user.getAccessLevel().getValue();
+        this.accountState = user.getAccountState().getValue();
     }
 
     @Override

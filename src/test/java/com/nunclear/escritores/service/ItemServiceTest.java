@@ -63,7 +63,7 @@ class ItemServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(itemRepository.save(any(Item.class))).thenReturn(saved);
         when(saved.getId()).thenReturn(100);
@@ -171,7 +171,7 @@ class ItemServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(itemRepository.save(item)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
@@ -208,7 +208,7 @@ class ItemServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         MessageResponse response = itemService.deleteItem(5);
 

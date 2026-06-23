@@ -78,7 +78,6 @@ public final class AuthUtils {
         if (user == null) {
             return false;
         }
-        String level = user.getAccessLevel().name();
-        return "moderator".equals(level) || "admin".equals(level);
+        return user.getAccessLevel().isModeratorOrAdmin();
     }
 }

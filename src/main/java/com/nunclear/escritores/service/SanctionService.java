@@ -73,7 +73,7 @@ public class SanctionService {
 
         UserSanction saved = userSanctionRepository.save(sanction);
 
-        target.setAccountState(com.nunclear.escritores.enums.AccountState.suspended);
+        target.setAccountState(com.nunclear.escritores.enums.AccountState.SUSPENDED);
         appUserRepository.save(target);
         revokeAllSessions(target.getId());
 
@@ -98,7 +98,7 @@ public class SanctionService {
 
         UserSanction saved = userSanctionRepository.save(sanction);
 
-        target.setAccountState(com.nunclear.escritores.enums.AccountState.banned);
+        target.setAccountState(com.nunclear.escritores.enums.AccountState.BANNED);
         appUserRepository.save(target);
         revokeAllSessions(target.getId());
 
@@ -124,7 +124,7 @@ public class SanctionService {
         UserSanction saved = userSanctionRepository.save(sanction);
 
         if ("temporary_ban".equals(sanction.getSanctionKind()) || "permanent_ban".equals(sanction.getSanctionKind())) {
-            target.setAccountState(com.nunclear.escritores.enums.AccountState.active);
+            target.setAccountState(com.nunclear.escritores.enums.AccountState.ACTIVE);
             appUserRepository.save(target);
         }
 
@@ -200,9 +200,7 @@ public class SanctionService {
 
     private AppUser getAuthenticatedModeratorOrAdmin() {
         AppUser user = getAuthenticatedUser();
-        String role = user.getAccessLevel().name();
-
-        if (!"moderator".equals(role) && !"admin".equals(role)) {
+        if (!user.getAccessLevel().isModeratorOrAdmin()) {
             throw new UnauthorizedException("No autorizado");
         }
 
@@ -211,7 +209,7 @@ public class SanctionService {
 
     private AppUser getAuthenticatedAdminOnly() {
         AppUser user = getAuthenticatedUser();
-        if (!"admin".equals(user.getAccessLevel().name())) {
+        if (!user.getAccessLevel().isAdmin()) {
             throw new UnauthorizedException("Solo un admin puede realizar esta acción");
         }
         return user;

@@ -63,8 +63,8 @@ public class AuthService {
         user.setEmailAddress(request.emailAddress());
         user.setDisplayName(request.displayName());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setAccessLevel(AccessLevel.user);
-        user.setAccountState(AccountState.pending_verification);
+        user.setAccessLevel(AccessLevel.USER);
+        user.setAccountState(AccountState.PENDING_VERIFICATION);
 
         AppUser saved = appUserRepository.save(user);
 
@@ -82,8 +82,8 @@ public class AuthService {
                 saved.getLoginName(),
                 saved.getEmailAddress(),
                 saved.getDisplayName(),
-                saved.getAccessLevel().name(),
-                saved.getAccountState().name(),
+                saved.getAccessLevel().getValue(),
+                saved.getAccountState().getValue(),
                 saved.getCreatedAt()
         );
     }
@@ -97,7 +97,7 @@ public class AuthService {
             throw new UnauthorizedException("Cuenta no disponible");
         }
 
-        if (user.getAccountState() == AccountState.suspended || user.getAccountState() == AccountState.banned) {
+        if (user.getAccountState().isBlocked()) {
             throw new UnauthorizedException("Cuenta suspendida o bloqueada");
         }
 
@@ -113,7 +113,7 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(
                 user.getId(),
                 user.getLoginName(),
-                user.getAccessLevel().name(),
+                user.getAccessLevel().getValue(),
                 sessionId
         );
 
@@ -135,7 +135,7 @@ public class AuthService {
                         user.getId(),
                         user.getLoginName(),
                         user.getDisplayName(),
-                        user.getAccessLevel().name()
+                        user.getAccessLevel().getValue()
                 )
         );
     }
@@ -169,7 +169,7 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(
                 user.getId(),
                 user.getLoginName(),
-                user.getAccessLevel().name(),
+                user.getAccessLevel().getValue(),
                 newSessionId
         );
 
@@ -203,8 +203,8 @@ public class AuthService {
                 user.getDisplayName(),
                 user.getBioText(),
                 user.getAvatarUrl(),
-                user.getAccessLevel().name(),
-                user.getAccountState().name()
+                user.getAccessLevel().getValue(),
+                user.getAccountState().getValue()
         );
     }
 
@@ -270,7 +270,7 @@ public class AuthService {
         emailVerificationTokenRepository.save(token);
 
         user.setEmailVerifiedAt(AppClock.now());
-        user.setAccountState(AccountState.active);
+        user.setAccountState(AccountState.ACTIVE);
         appUserRepository.save(user);
 
         return new MessageResponse("Correo confirmado correctamente");

@@ -59,7 +59,7 @@ class SkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -203,7 +203,7 @@ class SkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(skillRepository.findById(5)).thenReturn(Optional.of(skill));
         when(skill.getStoryId()).thenReturn(10);
@@ -240,7 +240,7 @@ class SkillServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(skillRepository.findById(5)).thenReturn(Optional.of(skill));
         when(skill.getStoryId()).thenReturn(10);

@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -52,7 +53,7 @@ class CharacterControllerTest {
                 "Guerrera",
                 "Magia",
                 20,
-                LocalDate.of(2005, 1, 1),
+                LocalDate.of(2005, Month.JANUARY, 1),
                 true,
                 List.of("hero", "mage"),
                 "https://img.test/alicia.jpg"
@@ -133,14 +134,14 @@ class CharacterControllerTest {
                 "Arquera",
                 "Puntería",
                 21,
-                LocalDate.of(2004, 1, 1),
+                LocalDate.of(2004, Month.JANUARY, 1),
                 true,
                 List.of("support", "archer"),
                 "https://img.test/new.jpg"
         );
 
         UpdateCharacterResponse response = new UpdateCharacterResponse(
-                1, "Alicia actualizada", LocalDateTime.of(2026, 4, 22, 12, 0)
+                1, "Alicia actualizada", LocalDateTime.of(2026, Month.APRIL, 22, 12, 0)
         );
 
         when(characterService.updateCharacter(eq(1), eq(request))).thenReturn(response);

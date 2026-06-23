@@ -16,6 +16,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -51,7 +52,7 @@ class StoryControllerTest {
                 "historia",
                 "public",
                 "draft",
-                LocalDateTime.of(2026, 4, 22, 10, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 10, 0)
         );
 
         CreateStoryRequest request = new CreateStoryRequest(
@@ -187,7 +188,7 @@ class StoryControllerTest {
     @WithMockUser(roles = "USER")
     void getMyArchived_deberiaResponder200() throws Exception {
         PageResponse<ArchivedStoryItemResponse> response = new PageResponse<>(
-                List.of(new ArchivedStoryItemResponse(1, "Archivada", LocalDateTime.of(2026, 4, 22, 12, 0))),
+                List.of(new ArchivedStoryItemResponse(1, "Archivada", LocalDateTime.of(2026, Month.APRIL, 22, 12, 0))),
                 0,
                 20,
                 1,
@@ -216,7 +217,7 @@ class StoryControllerTest {
         UpdateStoryResponse response = new UpdateStoryResponse(
                 1,
                 "Nuevo título",
-                LocalDateTime.of(2026, 4, 22, 13, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 13, 0)
         );
 
         when(storyService.updateStory(eq(1), eq(request))).thenReturn(response);
@@ -235,7 +236,7 @@ class StoryControllerTest {
         StoryPublicationResponse response = new StoryPublicationResponse(
                 1,
                 "published",
-                LocalDateTime.of(2026, 4, 22, 14, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 14, 0)
         );
 
         when(storyService.publishStory(1)).thenReturn(response);
@@ -262,7 +263,7 @@ class StoryControllerTest {
     void archiveStory_deberiaResponder200() throws Exception {
         StoryArchiveResponse response = new StoryArchiveResponse(
                 1,
-                LocalDateTime.of(2026, 4, 22, 15, 0)
+                LocalDateTime.of(2026, Month.APRIL, 22, 15, 0)
         );
 
         when(storyService.archiveStory(1)).thenReturn(response);

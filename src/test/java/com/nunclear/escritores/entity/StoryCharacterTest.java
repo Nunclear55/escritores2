@@ -3,6 +3,7 @@ package com.nunclear.escritores.entity;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,11 +23,11 @@ class StoryCharacterTest {
     @Test
     void preUpdate_deberiaActualizarUpdatedAt() {
         StoryCharacter character = new StoryCharacter();
-        character.setUpdatedAt(LocalDateTime.of(2026, 4, 22, 10, 0));
+        character.setUpdatedAt(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0));
 
         character.preUpdate();
 
         assertNotNull(character.getUpdatedAt());
-        assertTrue(character.getUpdatedAt().isAfter(LocalDateTime.of(2026, 4, 22, 10, 0)));
+        assertTrue(character.getUpdatedAt().isAfter(LocalDateTime.of(2026, Month.APRIL, 22, 10, 0)));
     }
 }

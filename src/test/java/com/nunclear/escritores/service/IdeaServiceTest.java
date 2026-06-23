@@ -65,7 +65,7 @@ class IdeaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(ideaRepository.save(any(Idea.class))).thenReturn(saved);
         when(saved.getId()).thenReturn(100);
@@ -107,7 +107,7 @@ class IdeaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         IdeaDetailResponse response = ideaService.getIdeaById(5);
 
@@ -131,7 +131,7 @@ class IdeaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         Page<Idea> page = new PageImpl<>(List.of(idea), PageRequest.of(0, 20), 1);
         when(ideaRepository.findByStoryWithSearch(eq(10), eq("base"), any(Pageable.class))).thenReturn(page);
@@ -165,7 +165,7 @@ class IdeaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(ideaRepository.save(idea)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
@@ -200,7 +200,7 @@ class IdeaServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         MessageResponse response = ideaService.deleteIdea(5);
 

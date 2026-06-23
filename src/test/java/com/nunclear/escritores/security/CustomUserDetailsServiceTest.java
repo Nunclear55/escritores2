@@ -79,8 +79,8 @@ class CustomUserDetailsServiceTest {
         user.setId(1);
         user.setLoginName("juan");
         user.setPasswordHash("hash");
-        user.setAccessLevel(AccessLevel.user);
-        user.setAccountState(AccountState.active);
+        user.setAccessLevel(AccessLevel.USER);
+        user.setAccountState(AccountState.ACTIVE);
         return user;
     }
 }

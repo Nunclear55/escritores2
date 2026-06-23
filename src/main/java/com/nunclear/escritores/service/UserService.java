@@ -48,7 +48,7 @@ public class UserService {
                 user.getDisplayName(),
                 user.getBioText(),
                 user.getAvatarUrl(),
-                user.getAccessLevel().name(),
+                user.getAccessLevel().getValue(),
                 user.getCreatedAt()
         );
     }
@@ -63,8 +63,8 @@ public class UserService {
                 user.getDisplayName(),
                 user.getBioText(),
                 user.getAvatarUrl(),
-                user.getAccessLevel().name(),
-                user.getAccountState().name()
+                user.getAccessLevel().getValue(),
+                user.getAccountState().getValue()
         );
     }
 
@@ -77,8 +77,8 @@ public class UserService {
                         user.getId(),
                         user.getLoginName(),
                         user.getDisplayName(),
-                        user.getAccessLevel().name(),
-                        user.getAccountState().name()
+                        user.getAccessLevel().getValue(),
+                        user.getAccountState().getValue()
                 ))
                 .toList();
 
@@ -189,7 +189,7 @@ public class UserService {
     public MessageResponse deactivateMyAccount() {
         AppUser user = getAuthenticatedUser();
 
-        user.setAccountState(AccountState.banned);
+        user.setAccountState(AccountState.BANNED);
         user.setDeletedAt(AppClock.now());
         appUserRepository.save(user);
 
@@ -262,7 +262,7 @@ public class UserService {
             throw new ResourceNotFoundException(USER_NOT_FOUND);
         }
 
-        if (user.getAccountState() == AccountState.banned) {
+        if (user.getAccountState() == AccountState.BANNED) {
             throw new ResourceNotFoundException(USER_NOT_FOUND);
         }
     }

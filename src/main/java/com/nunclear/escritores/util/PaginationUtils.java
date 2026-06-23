@@ -4,7 +4,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Helper methods to construct {@link Pageable} instances based on page, size,
@@ -31,7 +31,7 @@ public final class PaginationUtils {
      * @param fieldMapper function mapping API sort fields to entity property names
      * @return a pageable object configured with sorting
      */
-    public static Pageable buildPageable(int page, int size, String sort, Function<String, String> fieldMapper) {
+    public static Pageable buildPageable(int page, int size, String sort, UnaryOperator<String> fieldMapper) {
         String[] sortParts = sort.split(",");
         String field = sortParts[0];
         Sort.Direction direction =

@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,7 +71,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -128,7 +129,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -164,7 +165,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -380,7 +381,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -436,7 +437,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -450,7 +451,7 @@ class ChapterServiceTest {
 
         when(saved.getId()).thenReturn(5);
         when(saved.getTitle()).thenReturn("Nuevo");
-        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 12, 0));
+        when(saved.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 12, 0));
 
         UpdateChapterRequest request = new UpdateChapterRequest(
                 "Nuevo",
@@ -487,7 +488,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -521,7 +522,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -552,7 +553,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -562,7 +563,7 @@ class ChapterServiceTest {
 
         when(chapterRepository.save(chapter)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
-        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 13, 0));
+        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 13, 0));
 
         ChapterArchiveResponse response = chapterService.archiveChapter(5);
 
@@ -585,7 +586,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getId()).thenReturn(10);
@@ -628,7 +629,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -662,7 +663,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(9)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -702,7 +703,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(9)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -735,7 +736,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(9)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -760,7 +761,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(99)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(99);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(storyRepository.findById(10)).thenReturn(Optional.of(story));
         when(story.getOwnerUserId()).thenReturn(1);
@@ -812,7 +813,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(9)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -853,7 +854,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(9)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -890,7 +891,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -920,14 +921,14 @@ class ChapterServiceTest {
         AppUser user = mock(AppUser.class);
         Chapter saved = mock(Chapter.class);
         CustomUserDetails principal = mock(CustomUserDetails.class);
-        LocalDate existingDate = LocalDate.of(2026, 1, 1);
+        LocalDate existingDate = LocalDate.of(2026, Month.JANUARY, 1);
 
         when(principal.getId()).thenReturn(1);
         mockAuthenticated(principal);
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -960,7 +961,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -994,7 +995,7 @@ class ChapterServiceTest {
 
         when(appUserRepository.findById(1)).thenReturn(Optional.of(user));
         when(user.getId()).thenReturn(1);
-        when(user.getAccessLevel()).thenReturn(AccessLevel.user);
+        when(user.getAccessLevel()).thenReturn(AccessLevel.USER);
 
         when(chapterRepository.findById(5)).thenReturn(Optional.of(chapter));
         when(chapter.getStoryId()).thenReturn(10);
@@ -1004,12 +1005,12 @@ class ChapterServiceTest {
 
         when(chapterRepository.save(chapter)).thenReturn(saved);
         when(saved.getId()).thenReturn(5);
-        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, 4, 22, 13, 0));
+        when(saved.getArchivedAt()).thenReturn(LocalDateTime.of(2026, Month.APRIL, 22, 13, 0));
 
         ChapterArchiveResponse response = chapterService.archiveChapter(5);
 
         assertEquals(5, response.id());
-        assertEquals(LocalDateTime.of(2026, 4, 22, 13, 0), response.archivedAt());
+        assertEquals(LocalDateTime.of(2026, Month.APRIL, 22, 13, 0), response.archivedAt());
 
         verify(chapter).setArchivedAt(any(LocalDateTime.class));
         verify(chapterRepository).save(chapter);

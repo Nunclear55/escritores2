@@ -14,6 +14,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -146,7 +147,7 @@ class ChapterControllerTest {
         );
 
         UpdateChapterResponse response = new UpdateChapterResponse(
-                1, "Nuevo título", LocalDateTime.of(2026, 4, 22, 12, 0)
+                1, "Nuevo título", LocalDateTime.of(2026, Month.APRIL, 22, 12, 0)
         );
 
         when(chapterService.updateChapter(eq(1), eq(request))).thenReturn(response);
@@ -187,7 +188,7 @@ class ChapterControllerTest {
     @WithMockUser(roles = "USER")
     void archiveChapter_deberiaResponder200() throws Exception {
         ChapterArchiveResponse response = new ChapterArchiveResponse(
-                1, LocalDateTime.of(2026, 4, 22, 13, 0)
+                1, LocalDateTime.of(2026, Month.APRIL, 22, 13, 0)
         );
 
         when(chapterService.archiveChapter(1)).thenReturn(response);
